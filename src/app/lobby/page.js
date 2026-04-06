@@ -7,7 +7,9 @@ import PlayerList from "@/components/PlayerList";
 import SettingsPanel from "@/components/SettingsPanel";
 import BuyInSelector from "@/components/BuyInSelector";
 
-export default function LobbyPage() {
+import { Suspense } from "react";
+
+function LobbyContent() {
   const { roomState, isAdmin, isConnected, socket, playerId } = useSocket();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -138,5 +140,17 @@ export default function LobbyPage() {
          </div>
       )}
     </div>
+  );
+}
+
+export default function LobbyPage() {
+  return (
+    <Suspense fallback={
+       <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-pulse text-zinc-500 font-mono">Loading Lobby...</div>
+       </div>
+    }>
+      <LobbyContent />
+    </Suspense>
   );
 }
