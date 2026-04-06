@@ -32,3 +32,31 @@ Because of the custom server architecture, do not use the standard `npm run dev`
    ```bash
    git clone [https://github.com/YOUR_USERNAME/poker-engine.git](https://github.com/YOUR_USERNAME/poker-engine.git)
    cd poker-engine
+   ```
+2. Install dependencies:
+
+```
+npm install
+```
+3. Start the custom server:
+
+```
+node server.js
+```
+Open http://localhost:3000 in your browser.
+
+##🌍 Deployment (Important)
+DO NOT deploy this application to Vercel, Netlify, or other Serverless platforms. Serverless platforms kill the server process after every HTTP request, which will instantly disconnect the WebSockets and erase the in-memory activeRooms Map.
+
+This app requires a persistent, long-running Node environment. It is optimized for Render or Railway.
+
+Deploying to Render (Free Tier)
+Connect your GitHub repository to Render as a Web Service.
+
+Set the Environment to Node.
+
+Build Command: npm install && npm run build
+
+Start Command: npm start
+
+The free tier's 15-minute inactivity sleep is an intended feature—it acts as a hard reset for the RAM when the game is over.
