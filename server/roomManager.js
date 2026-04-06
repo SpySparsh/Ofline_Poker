@@ -48,7 +48,12 @@ function createRoom(adminId, adminName) {
       activePlayerIndex: 0,
       dealerIndex: 0,
       roundHistory: [], // For undo functionality
-      showdownVotes: [] // Array of { playerId, vote: "WON" | "LOST" }
+      showdownVotes: [], // Array of { playerId, vote: "WON" | "LOST" }
+    },
+    bgmState: {
+      currentTrackIndex: 1,
+      startTime: Date.now(),
+      totalTracks: 5
     }
   };
 

@@ -91,6 +91,10 @@ function mountSocketHandlers(io) {
        if(room) {
           gameEngine.startHand(room);
           io.to(roomId).emit("game:stateUpdate", room);
+          
+          // Trigger initial BGM synchronization for all clients
+          room.bgmState.startTime = Date.now();
+          io.to(roomId).emit("bgm:syncTrack", room.bgmState);
        }
     });
 
@@ -185,6 +189,15 @@ function mountSocketHandlers(io) {
        if(!room) return;
        gameEngine.rebuy(room, playerId, amount);
        io.to(roomId).emit("game:stateUpdate", room);
+    });
+
+    // BGM: Admin DJ track ended — rotate to next track
+    socket.on("bgm:trackEnded", ({ roomId }) => {
+       const room = getRoom(roomId);
+       if (!room) return;
+       room.bgmState.currentTrackIndex = (room.bgmState.currentTrackIndex % room.bgmState.totalTracks) + 1;
+       room.bgmState.startTime = Date.now();
+       io.to(roomId).emit("bgm:syncTrack", room.bgmState);
     });
 
     // DISCONNECT (tab close, network drop, etc.)

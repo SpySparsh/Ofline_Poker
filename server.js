@@ -25,6 +25,9 @@ app.prepare().then(() => {
   // Mount logic handlers
   mountSocketHandlers(io);
 
+  // Serve soundtrack files as static assets
+  expressApp.use('/audio', express.static('soundtracks'));
+
   // Handle all HTTP traffic via Next.js
   expressApp.all(/(.*)/, (req, res) => {
     return handle(req, res);

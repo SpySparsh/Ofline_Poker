@@ -1,7 +1,7 @@
 import { Outfit, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { SocketProvider } from "@/context/SocketContext";
-
+import AudioEngine from "@/components/AudioEngine";
 const outfit = Outfit({
   subsets: ["latin"],
   variable: "--font-outfit",
@@ -24,6 +24,7 @@ export default function RootLayout({ children }) {
         className={`${outfit.variable} ${jetbrainsMono.variable} antialiased bg-zinc-950 text-zinc-100 font-sans`}
       >
         <SocketProvider>
+          <AudioEngine />
           {children}
         </SocketProvider>
       </body>

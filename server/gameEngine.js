@@ -301,6 +301,14 @@ function resolveShowdown(room, winners) {
        if (firstWinner) firstWinner.stack += remainder;
    }
    
+   // Winner's Curse: winner becomes dealer next hand
+   if (room.settings.sequenceMode === "winner_curse" && winners.length > 0) {
+     const winnerIdx = room.players.findIndex(p => p.id === winners[0]);
+     if (winnerIdx !== -1) {
+       room.gameState.dealerIndex = winnerIdx;
+     }
+   }
+   
    room.gameState.pot = 0;
 }
 

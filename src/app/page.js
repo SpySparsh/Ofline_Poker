@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSocket } from "@/context/SocketContext";
 import { useRouter } from "next/navigation";
 
@@ -13,7 +13,34 @@ export default function LandingPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  // Home page BGM — local loop
+  const bgmRef = useRef(null);
+  const [bgmStarted, setBgmStarted] = useState(false);
+
+  useEffect(() => {
+    bgmRef.current = new Audio("/soundtracks/home_page.mp3");
+    bgmRef.current.loop = true;
+    bgmRef.current.volume = 0.25;
+
+    return () => {
+      if (bgmRef.current) {
+        bgmRef.current.pause();
+        bgmRef.current.src = "";
+        bgmRef.current = null;
+      }
+    };
+  }, []);
+
+  // Start BGM on first user interaction (autoplay policy)
+  const startBgm = () => {
+    if (!bgmStarted && bgmRef.current) {
+      bgmRef.current.play().catch(() => {});
+      setBgmStarted(true);
+    }
+  };
+
   const handleCreateRoom = () => {
+    startBgm();
     if (!name.trim()) {
       setError("Please enter your name");
       return;
@@ -24,17 +51,26 @@ export default function LandingPage() {
     }
     
     setIsLoading(true);
+    // Stop home BGM before navigating
+    if (bgmRef.current) bgmRef.current.pause();
     socket.emit("room:create", { adminId: playerId, adminName: name.trim() }, (res) => {
       setIsLoading(false);
       if (res.success) {
+        const playCreateSound = () => {
+          const audio = new Audio('/soundtracks/room_create.mp3');
+          audio.play().catch(e => console.warn('UI Sound blocked', e));
+        };
+        playCreateSound();
         router.push(`/lobby?room=${res.room.roomId}`);
       } else {
         setError("Failed to create room.");
+        if (bgmRef.current) bgmRef.current.play().catch(() => {});
       }
     });
   };
 
   const handleJoinRoom = () => {
+    startBgm();
     if (!name.trim()) {
       setError("Please enter your name");
       return;
@@ -49,18 +85,20 @@ export default function LandingPage() {
     }
 
     setIsLoading(true);
+    if (bgmRef.current) bgmRef.current.pause();
     socket.emit("room:join", { roomId: joinCode.trim(), playerId, playerName: name.trim() }, (res) => {
       setIsLoading(false);
       if (res.success) {
         router.push(`/lobby?room=${res.room.roomId}`);
       } else {
         setError(res.message || "Failed to join room.");
+        if (bgmRef.current) bgmRef.current.play().catch(() => {});
       }
     });
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4" onClick={startBgm}>
       <div className="absolute top-4 right-4 flex items-center gap-2 text-sm text-white/50">
         <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-emerald-500" : "bg-red-500"}`}></div>
         {isConnected ? "Connected" : "Connecting..."}
@@ -71,7 +109,7 @@ export default function LandingPage() {
            POKER<span className="text-zinc-100">ENGINE</span>
         </h1>
         <p className="text-zinc-400 text-lg max-w-md mx-auto">
-          Real-time digital ledger for in-person Texas Hold'em. No cards, just pure chip management.
+          Real-time digital ledger for in-person Texas Hold&apos;em. No cards, just pure chip management.
         </p>
       </div>
 
@@ -85,6 +123,7 @@ export default function LandingPage() {
             placeholder="e.g. Doyle Brunson"
             value={name}
             onChange={(e) => { setName(e.target.value); setError(""); }}
+            onFocus={startBgm}
             maxLength={20}
           />
         </div>
@@ -118,6 +157,7 @@ export default function LandingPage() {
               maxLength={4}
               value={joinCode}
               onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); setError(""); }}
+              onFocus={startBgm}
             />
             <button 
               onClick={handleJoinRoom}

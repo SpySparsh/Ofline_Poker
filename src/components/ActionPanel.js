@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import { useSocket } from "@/context/SocketContext";
 import { ChipTray } from "@/components/ChipIcon";
+import { useAudio } from "@/hooks/useAudio";
 
 export default function ActionPanel({ roomState }) {
   const { socket, playerId } = useSocket();
+  const { playChipSound, playSfx } = useAudio();
   const [stagedAmount, setStagedAmount] = useState(0);
   const [isConfirming, setIsConfirming] = useState(false);
 
@@ -28,12 +30,16 @@ export default function ActionPanel({ roomState }) {
   }, [isMyTurn]);
 
   const handleAction = (action, amount = 0) => {
+    playSfx("click");
     socket.emit("game:action", { roomId: roomState.roomId, playerId, action, amount });
     setStagedAmount(0);
     setIsConfirming(false);
   };
 
   const handleAddChip = (denomination) => {
+    // Play chip sound based on denomination
+    playChipSound(denomination);
+    
     // Can't exceed stack (minus any call cost already covered)
     const maxBet = me.stack - amountToCall;
     const newAmount = Math.min(stagedAmount + denomination, maxBet);

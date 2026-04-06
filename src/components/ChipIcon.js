@@ -2,13 +2,18 @@
 
 // Chip denomination → color mapping
 const CHIP_COLORS = {
-  100:  { bg: "#f5f5f4", ring: "#a8a29e", text: "#1c1917", label: "stone" },   // White/Stone
-  500:  { bg: "#dc2626", ring: "#991b1b", text: "#fef2f2", label: "red" },      // Red
-  1000: { bg: "#2563eb", ring: "#1e40af", text: "#eff6ff", label: "blue" },     // Blue
-  5000: { bg: "#111111", ring: "#52525b", text: "#fafafa", label: "black" },    // Black
+  10:     { bg: "#e7e5e4", ring: "#a8a29e", text: "#1c1917" },  // Cream
+  50:     { bg: "#ea580c", ring: "#9a3412", text: "#fff7ed" },  // Orange
+  100:    { bg: "#f5f5f4", ring: "#a8a29e", text: "#1c1917" },  // White/Stone
+  500:    { bg: "#dc2626", ring: "#991b1b", text: "#fef2f2" },  // Red
+  1000:   { bg: "#2563eb", ring: "#1e40af", text: "#eff6ff" },  // Blue
+  5000:   { bg: "#111111", ring: "#52525b", text: "#fafafa" },  // Black
+  10000:  { bg: "#7c3aed", ring: "#5b21b6", text: "#f5f3ff" },  // Purple
+  50000:  { bg: "#d97706", ring: "#92400e", text: "#fffbeb" },  // Gold
+  100000: { bg: "#94a3b8", ring: "#475569", text: "#f8fafc" },  // Platinum
 };
 
-const DENOMINATIONS = [100, 500, 1000, 5000];
+const DENOMINATIONS = [10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000];
 
 /**
  * Uses a greedy algorithm (largest denomination first) to decompose
@@ -26,19 +31,24 @@ function decomposeToChips(amount) {
       remaining -= denom * count;
     }
   }
-  // If there's a remainder below 100, assign it to a virtual "1" denomination
-  // But for display purposes we'll just show "odd" chips as 100s
-  if (remaining > 0) {
-    chips[100] = (chips[100] || 0) + 1;
-  }
   return chips;
+}
+
+/**
+ * Format chip label for display
+ */
+function formatChipLabel(denomination) {
+  if (denomination >= 1000) {
+    return `${denomination / 1000}K`;
+  }
+  return denomination.toString();
 }
 
 /**
  * Renders a single chip icon.
  * size: "sm" (16px), "md" (28px), "lg" (40px)
  */
-function SingleChip({ denomination, size = "md", count, onClick, interactive = false }) {
+function SingleChip({ denomination, size = "md", count, onClick, interactive = false, disabled = false }) {
   const colors = CHIP_COLORS[denomination] || CHIP_COLORS[100];
   
   const sizes = {
@@ -48,26 +58,29 @@ function SingleChip({ denomination, size = "md", count, onClick, interactive = f
   };
   const s = sizes[size] || sizes.md;
   
-  const formatted = denomination >= 1000 ? `${denomination / 1000}K` : denomination;
+  const formatted = formatChipLabel(denomination);
+  const isDisabled = disabled || !interactive;
 
   return (
     <button
       type="button"
-      onClick={onClick}
-      disabled={!interactive}
+      onClick={!disabled ? onClick : undefined}
+      disabled={isDisabled}
       className={`relative inline-flex items-center justify-center rounded-full select-none shrink-0 transition-all duration-150 ${
-        interactive 
-          ? "cursor-pointer hover:scale-110 active:scale-95 hover:brightness-125 shadow-md hover:shadow-lg" 
-          : "cursor-default"
+        disabled
+          ? "cursor-not-allowed opacity-40 grayscale"
+          : interactive 
+            ? "cursor-pointer hover:scale-110 active:scale-95 hover:brightness-125 shadow-md hover:shadow-lg" 
+            : "cursor-default"
       }`}
       style={{
         width: s.w,
         height: s.w,
         backgroundColor: colors.bg,
         border: `${s.ringW}px dashed ${colors.ring}`,
-        boxShadow: interactive ? `0 2px 8px ${colors.ring}40` : "none",
+        boxShadow: interactive && !disabled ? `0 2px 8px ${colors.ring}40` : "none",
       }}
-      title={`${denomination} chip`}
+      title={disabled ? `${denomination} — not enough chips` : `${denomination} chip`}
     >
       <span
         className="font-mono font-black leading-none"
@@ -96,12 +109,14 @@ function MiniChipStack({ amount }) {
   if (!amount || amount <= 0) return null;
   const chips = decomposeToChips(amount);
   
+  // Only show up to 4 most significant denominations to avoid clutter
+  const activeChips = DENOMINATIONS.filter(d => chips[d]).slice(-4);
+  
   return (
     <div className="flex items-center gap-0.5">
-      {DENOMINATIONS.map(d => {
-        if (!chips[d]) return null;
-        return <SingleChip key={d} denomination={d} size="sm" count={chips[d]} />;
-      })}
+      {activeChips.map(d => (
+        <SingleChip key={d} denomination={d} size="sm" count={chips[d]} />
+      ))}
     </div>
   );
 }
@@ -109,6 +124,7 @@ function MiniChipStack({ amount }) {
 /**
  * Renders the interactive chip tray for the ActionPanel.
  * Players tap chips to increment their working bet.
+ * Chips above the player's remaining stack are greyed out.
  */
 function ChipTray({ onAddChip, availableStack }) {
   return (
@@ -119,6 +135,7 @@ function ChipTray({ onAddChip, availableStack }) {
           denomination={d}
           size="lg"
           interactive
+          disabled={d > availableStack}
           onClick={() => onAddChip(d)}
         />
       ))}
@@ -126,4 +143,4 @@ function ChipTray({ onAddChip, availableStack }) {
   );
 }
 
-export { SingleChip, MiniChipStack, ChipTray, decomposeToChips, DENOMINATIONS, CHIP_COLORS };
+export { SingleChip, MiniChipStack, ChipTray, decomposeToChips, DENOMINATIONS, CHIP_COLORS, formatChipLabel };

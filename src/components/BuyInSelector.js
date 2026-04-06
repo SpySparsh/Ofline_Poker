@@ -15,6 +15,19 @@ export default function BuyInSelector({ roomId, isLocked, onLock }) {
       if (isNaN(finalAmount) || finalAmount <= 0) return;
     }
     
+    // Trigger lock in UI sound
+    const playLockSound = () => {
+      const audio = new Audio('/soundtracks/lock_in.mp3');
+      audio.play().catch(e => console.warn('UI Sound blocked', e));
+    };
+    playLockSound();
+    
+    // Attempt to unlock background music natively on this user interaction click
+    const globalAudio = document.getElementById('global-bgm');
+    if (globalAudio) {
+      globalAudio.play().catch(e => console.warn('Audio unlock delayed.', e));
+    }
+    
     socket.emit("player:buyIn", { roomId, playerId, amount: finalAmount });
     if (onLock) onLock();
   };

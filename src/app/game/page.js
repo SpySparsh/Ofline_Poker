@@ -10,12 +10,24 @@ import RoundIndicator from "@/components/RoundIndicator";
 import AdminControls from "@/components/AdminControls";
 import ShowdownPanel from "@/components/ShowdownPanel";
 import RebuyModal from "@/components/RebuyModal";
+import { useBGM } from "@/hooks/useBGM";
+import { useAudio } from "@/hooks/useAudio";
 
 export default function GamePage() {
-  const { roomState, playerId, isConnected, isAdmin } = useSocket();
+  const { roomState, playerId, isConnected, isAdmin, socket } = useSocket();
   const router = useRouter();
   const [showRebuy, setShowRebuy] = useState(false);
+  const { muted, toggleMute } = useAudio();
 
+  // Synchronized BGM for the game room (Admin DJ hook)
+  useBGM(muted);
+
+  // Kickstart failsafe dispatch on mount
+  useEffect(() => {
+    if (roomState?.bgmState) {
+      window.dispatchEvent(new CustomEvent('bgm:kickstart', { detail: roomState.bgmState }));
+    }
+  }, []);
   useEffect(() => {
     if (!isConnected || !roomState) {
       const t = setTimeout(() => {
@@ -56,21 +68,35 @@ export default function GamePage() {
   return (
     <div className="min-h-dvh flex flex-col relative overflow-hidden">
       
-      {/* === TOP BAR (non-admin) === */}
+      {/* === TOP BAR === */}
       <div className="relative z-20 flex items-center justify-between px-3 pt-3 pb-1">
         <div className="glass-panel px-3 py-1.5 bg-black/50 text-[10px] font-mono text-zinc-500 uppercase tracking-widest">
           Hand #{gameState.gameNumber}
         </div>
-        <button 
-          onClick={() => setShowRebuy(true)}
-          className={`glass-panel px-3 py-1.5 bg-black/50 hover:bg-emerald-900/50 text-emerald-400 font-bold border border-emerald-500/30 transition-colors text-[10px] uppercase tracking-wider flex items-center gap-1.5 ${isAdmin ? 'mr-0' : ''}`}
-        >
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-          Add Chips
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Mute Toggle */}
+          <button
+            onClick={toggleMute}
+            className="glass-panel px-2 py-1.5 bg-black/50 hover:bg-zinc-800/50 text-zinc-400 hover:text-zinc-200 transition-colors text-[10px] uppercase tracking-wider"
+            title={muted ? "Unmute" : "Mute"}
+          >
+            {muted ? (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path></svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+            )}
+          </button>
+          <button 
+            onClick={() => setShowRebuy(true)}
+            className="glass-panel px-3 py-1.5 bg-black/50 hover:bg-emerald-900/50 text-emerald-400 font-bold border border-emerald-500/30 transition-colors text-[10px] uppercase tracking-wider flex items-center gap-1.5"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+            Add Chips
+          </button>
+        </div>
       </div>
 
-      {/* === ADMIN TOOLBAR — sits right below top bar when admin === */}
+      {/* === ADMIN TOOLBAR === */}
       <AdminControls roomState={roomState} />
 
       {/* === MAIN TABLE AREA === */}
