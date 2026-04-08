@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# 🃏 Real-Time Local Poker Engine
 
-## Getting Started
+A blazing-fast, real-time Texas Hold'em companion web app designed for in-person play. This application acts as a digital dealer, managing the pot, chip stacks, betting math, turn enforcement, and custom house rules. **Note: This app does not deal physical cards; it is strictly a digital ledger and betting engine.**
 
-First, run the development server:
+## ✨ Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+* **Real-Time Turn Synchronization:** Sub-millisecond latency using native WebSockets (`Socket.io`) to broadcast player actions across the room instantly.
+* **Stateless/In-Memory Architecture:** Completely bypasses external databases (like Redis or Postgres). The entire game state is managed in the Node.js server's local RAM using a native `Map()`, resulting in zero database read/write latency.
+* **Auto-Cleanup / Self-Destruct:** The engine tracks connected sockets and automatically purges the room's memory the moment the final player disconnects.
+* **Visual Chip Distribution:** Uses a custom "Base Change + Greedy Algorithm" to automatically convert a player's raw numeric balance into visually accurate, tappable chip denominations (10, 50, 100, 500, 1K, 5K, 10K, 50K, 100K).
+* **Synchronized Audio Engine:** A robust client-side audio manager that syncs background music tracks (`Room1` - `Room5`) across all connected devices in the physical room, along with local UI sound effects for chips and button clicks.
+* **Time-Machine Undo:** Admin controls feature a snapshot-based undo system to revert the room state to the beginning of the current betting round in case of misclicks.
+
+## 🛠️ Tech Stack
+
+* **Frontend:** Next.js (App Router), React, Tailwind CSS
+* **Backend:** Node.js, Express.js
+* **Real-Time Engine:** Socket.io
+* **Database:** `null` (Local RAM)
+
+## 🏗️ Architecture Note: The Custom Server
+
+This Next.js application does **not** use the standard Next.js backend routing. To support persistent WebSockets and share memory between the frontend and backend, it utilizes a **Custom Node.js Server pattern** (`server.js`). 
+
+The single `server.js` file boots up Express, attaches the Socket.io instance, and then passes HTTP routing down to Next.js.
+
+## 🚀 Local Development
+
+Because of the custom server architecture, do not use the standard `npm run dev` command.
+
+1. Clone the repository:
+   ```bash
+   git clone [https://github.com/YOUR_USERNAME/poker-engine.git](https://github.com/YOUR_USERNAME/poker-engine.git)
+   cd poker-engine
+   ```
+2. Install dependencies:
+
 ```
+npm install
+```
+3. Start the custom server:
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+```
+node server.js
+```
+Open http://localhost:3000 in your browser.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+##🌍 Deployment (Important)
+DO NOT deploy this application to Vercel, Netlify, or other Serverless platforms. Serverless platforms kill the server process after every HTTP request, which will instantly disconnect the WebSockets and erase the in-memory activeRooms Map.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This app requires a persistent, long-running Node environment. It is optimized for Render or Railway.
 
-## Learn More
+Deploying to Render (Free Tier)
+Connect your GitHub repository to Render as a Web Service.
 
-To learn more about Next.js, take a look at the following resources:
+Set the Environment to Node.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Build Command: npm install && npm run build
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Start Command: npm start
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The free tier's 15-minute inactivity sleep is an intended feature—it acts as a hard reset for the RAM when the game is over.
