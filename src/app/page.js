@@ -149,10 +149,10 @@ export default function LandingPage() {
             <div className="flex-grow border-t border-white/10"></div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <input
               type="text"
-              className="flex-grow bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-lg font-mono text-center tracking-widest focus:outline-none focus:border-zinc-500 transition-colors"
+              className="w-full sm:flex-grow bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-lg font-mono text-center tracking-widest focus:outline-none focus:border-zinc-500 transition-colors"
               placeholder="CODE"
               maxLength={4}
               value={joinCode}
@@ -162,7 +162,7 @@ export default function LandingPage() {
             <button 
               onClick={handleJoinRoom}
               disabled={isLoading || !isConnected || joinCode.length !== 4}
-              className="btn-secondary px-8 whitespace-nowrap"
+              className="w-full sm:w-auto btn-secondary px-8 whitespace-nowrap"
             >
               Join Room
             </button>

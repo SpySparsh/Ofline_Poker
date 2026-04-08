@@ -33,14 +33,7 @@ export default function AdminControls({ roomState }) {
   const potResolved = isShowdown && roomState.gameState.pot === 0;
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 pointer-events-none">
-      <div className="max-w-5xl mx-auto px-4 pt-3 flex justify-between items-start">
-        
-        {/* Spacer for left side (Hand # badge lives in GamePage) */}
-        <div></div>
-
-        {/* Admin Toolbar — always visible, docked top-right */}
-        <div className="pointer-events-auto flex items-center gap-1.5 glass-panel px-2 py-1.5 bg-black/70 border-amber-500/20" style={{ borderRadius: '12px' }}>
+    <div className="flex items-center gap-1.5 glass-panel px-2 py-1.5 bg-black/70 border-amber-500/20" style={{ borderRadius: '12px' }}>
           
           {/* Crown indicator */}
           <span className="text-sm mr-1" title="Admin">👑</span>
@@ -93,8 +86,6 @@ export default function AdminControls({ roomState }) {
             End
           </button>
 
-        </div>
-      </div>
     </div>
   );
 }
