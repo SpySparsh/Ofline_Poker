@@ -5,6 +5,9 @@ import { socket } from "../lib/socket";
 import { v4 as uuidv4 } from "uuid";
 
 const SocketContext = createContext();
+const ROOM_CODE_KEY = "roomCode";
+const PLAYER_ID_KEY = "playerId";
+const PLAYER_NAME_KEY = "playerName";
 
 export function SocketProvider({ children }) {
   const [isConnected, setIsConnected] = useState(false);
@@ -12,7 +15,7 @@ export function SocketProvider({ children }) {
   const [playerId, setPlayerId] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   
-  // Use refs so the beforeunload handler always sees the latest values
+  // Use refs so socket callbacks always see the latest values
   const roomStateRef = useRef(null);
   const playerIdRef = useRef("");
   const prevPlayerCountRef = useRef(0);
@@ -30,17 +33,20 @@ export function SocketProvider({ children }) {
         playerId: playerIdRef.current,
       });
     }
+    localStorage.removeItem(ROOM_CODE_KEY);
+    localStorage.removeItem(PLAYER_NAME_KEY);
     setRoomState(null);
     setIsAdmin(false);
   }, []);
 
   useEffect(() => {
-    // Generate or retrieve persistent playerId from sessionStorage
-    let id = sessionStorage.getItem("poker_playerId");
+    // Generate or retrieve persistent playerId
+    let id = localStorage.getItem(PLAYER_ID_KEY) || sessionStorage.getItem("poker_playerId");
     if (!id) {
       id = uuidv4();
-      sessionStorage.setItem("poker_playerId", id);
     }
+    localStorage.setItem(PLAYER_ID_KEY, id);
+    sessionStorage.setItem("poker_playerId", id);
     setPlayerId(id);
     playerIdRef.current = id;
 
@@ -48,6 +54,25 @@ export function SocketProvider({ children }) {
 
     function onConnect() {
       setIsConnected(true);
+      const savedRoomCode = localStorage.getItem(ROOM_CODE_KEY);
+      const savedPlayerName = localStorage.getItem(PLAYER_NAME_KEY);
+      if (savedRoomCode && id && savedPlayerName) {
+        socket.emit("room:reconnect", {
+          roomId: savedRoomCode,
+          playerId: id,
+          playerName: savedPlayerName,
+        }, (res) => {
+          if (res.success) {
+            localStorage.setItem(ROOM_CODE_KEY, res.room.roomId);
+            localStorage.setItem(PLAYER_ID_KEY, id);
+            localStorage.setItem(PLAYER_NAME_KEY, savedPlayerName);
+            onRoomUpdated(res.room);
+          } else {
+            localStorage.removeItem(ROOM_CODE_KEY);
+            localStorage.removeItem(PLAYER_NAME_KEY);
+          }
+        });
+      }
     }
 
     function onDisconnect() {
@@ -117,15 +142,11 @@ export function SocketProvider({ children }) {
 
       setRoomState(newRoomState);
       setIsAdmin(newRoomState.adminId === playerIdRef.current);
-    }
-
-    // Emit room:leave when the tab/window is closing
-    function onBeforeUnload() {
-      if (roomStateRef.current && playerIdRef.current) {
-        socket.emit("room:leave", {
-          roomId: roomStateRef.current.roomId,
-          playerId: playerIdRef.current,
-        });
+      const currentPlayer = newRoomState.players?.find(p => p.id === playerIdRef.current);
+      if (currentPlayer) {
+        localStorage.setItem(ROOM_CODE_KEY, newRoomState.roomId);
+        localStorage.setItem(PLAYER_ID_KEY, playerIdRef.current);
+        localStorage.setItem(PLAYER_NAME_KEY, currentPlayer.name);
       }
     }
 
@@ -133,14 +154,12 @@ export function SocketProvider({ children }) {
     socket.on("disconnect", onDisconnect);
     socket.on("room:updated", onRoomUpdated);
     socket.on("game:stateUpdate", onRoomUpdated);
-    window.addEventListener("beforeunload", onBeforeUnload);
 
     return () => {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
       socket.off("room:updated", onRoomUpdated);
       socket.off("game:stateUpdate", onRoomUpdated);
-      window.removeEventListener("beforeunload", onBeforeUnload);
       socket.disconnect();
     };
   }, []);

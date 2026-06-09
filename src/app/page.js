@@ -5,7 +5,7 @@ import { useSocket } from "@/context/SocketContext";
 import { useRouter } from "next/navigation";
 
 export default function LandingPage() {
-  const { socket, isConnected, playerId } = useSocket();
+  const { socket, isConnected, playerId, roomState } = useSocket();
   const router = useRouter();
   
   const [name, setName] = useState("");
@@ -16,6 +16,14 @@ export default function LandingPage() {
   // Home page BGM — local loop
   const bgmRef = useRef(null);
   const [bgmStarted, setBgmStarted] = useState(false);
+
+  useEffect(() => {
+    if (roomState?.roomStatus === "playing") {
+      router.push("/game");
+    } else if (roomState?.roomStatus === "lobby") {
+      router.push(`/lobby?room=${roomState.roomId}`);
+    }
+  }, [roomState, router]);
 
   useEffect(() => {
     bgmRef.current = new Audio("/soundtracks/home_page.mp3");
@@ -56,6 +64,9 @@ export default function LandingPage() {
     socket.emit("room:create", { adminId: playerId, adminName: name.trim() }, (res) => {
       setIsLoading(false);
       if (res.success) {
+        localStorage.setItem("roomCode", res.room.roomId);
+        localStorage.setItem("playerId", playerId);
+        localStorage.setItem("playerName", name.trim());
         const playCreateSound = () => {
           const audio = new Audio('/soundtracks/room_create.mp3');
           audio.play().catch(e => console.warn('UI Sound blocked', e));
@@ -89,6 +100,9 @@ export default function LandingPage() {
     socket.emit("room:join", { roomId: joinCode.trim(), playerId, playerName: name.trim() }, (res) => {
       setIsLoading(false);
       if (res.success) {
+        localStorage.setItem("roomCode", res.room.roomId);
+        localStorage.setItem("playerId", playerId);
+        localStorage.setItem("playerName", name.trim());
         router.push(`/lobby?room=${res.room.roomId}`);
       } else {
         setError(res.message || "Failed to join room.");

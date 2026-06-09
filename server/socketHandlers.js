@@ -49,6 +49,30 @@ function mountSocketHandlers(io) {
       if(callback) callback({ success: true, room });
     });
 
+    // ROOM: RECONNECT / REJOIN EXISTING PLAYER
+    socket.on("room:reconnect", ({ roomId, playerId, playerName }, callback) => {
+      const room = getRoom(roomId);
+      if (!room) {
+        if(callback) callback({ success: false, message: "Room not found" });
+        return;
+      }
+
+      const player = room.players.find(p => p.id === playerId);
+      if (!player) {
+        if(callback) callback({ success: false, message: "Player not found in room" });
+        return;
+      }
+
+      if (playerName) {
+        player.name = playerName;
+      }
+
+      socket.join(roomId);
+      trackConnection(socket.id, roomId, playerId);
+      io.to(roomId).emit("room:updated", room);
+      if(callback) callback({ success: true, room });
+    });
+
     // ROOM: LEAVE (explicit quit)
     socket.on("room:leave", ({ roomId, playerId }) => {
       handlePlayerLeave(io, socket, roomId, playerId);
@@ -204,8 +228,7 @@ function mountSocketHandlers(io) {
     socket.on("disconnect", () => {
       const conn = getConnection(socket.id);
       if (conn) {
-        const { roomId, playerId } = conn;
-        handlePlayerLeave(io, socket, roomId, playerId);
+        removeConnection(socket.id);
       }
     });
   });
