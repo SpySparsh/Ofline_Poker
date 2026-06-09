@@ -102,8 +102,8 @@ function startHand(room) {
       }
     });
     room.gameState.currentRoundHighestBet = room.settings.ante;
-    // Action starts left of dealer
-    firstActorIndex = (room.gameState.dealerIndex + 1) % numPlayers;
+    // Action starts from dealer in ante-all mode
+    firstActorIndex = room.gameState.dealerIndex;
   } else {
     // Standard Small / Big Blind
     let sbIndex = (room.gameState.dealerIndex + 1) % numPlayers;
@@ -301,13 +301,17 @@ function resolveShowdown(room, winners) {
        if (firstWinner) firstWinner.stack += remainder;
    }
    
-   // Winner's Curse: winner becomes dealer next hand
-   if (room.settings.sequenceMode === "winner_curse" && winners.length > 0) {
+  // Winner's Curse: winner becomes last in next hand sequence
+  if (room.settings.sequenceMode === "winner_curse" && winners.length > 0) {
      const winnerIdx = room.players.findIndex(p => p.id === winners[0]);
      if (winnerIdx !== -1) {
-       room.gameState.dealerIndex = winnerIdx;
+       let nextDealerIndex = (winnerIdx + 1) % room.players.length;
+       while ((room.players[nextDealerIndex].stack <= 0 || room.players[nextDealerIndex].status === "waiting") && nextDealerIndex !== winnerIdx) {
+         nextDealerIndex = (nextDealerIndex + 1) % room.players.length;
+       }
+       room.gameState.dealerIndex = nextDealerIndex;
      }
-   }
+  }
    
    room.gameState.pot = 0;
 }
