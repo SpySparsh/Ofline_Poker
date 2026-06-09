@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSocket } from "@/context/SocketContext";
 import PotDisplay from "@/components/PotDisplay";
@@ -18,16 +18,49 @@ export default function GamePage() {
   const router = useRouter();
   const [showRebuy, setShowRebuy] = useState(false);
   const { muted, toggleMute } = useAudio();
+  const lastBgmKickstartRef = useRef("");
+  const bgmRetryAttachedRef = useRef(false);
 
   // Synchronized BGM for the game room (Admin DJ hook)
   useBGM(muted);
 
-  // Kickstart failsafe dispatch on mount
+  // Kickstart failsafe dispatch after room state rehydrates
   useEffect(() => {
-    if (roomState?.bgmState) {
-      window.dispatchEvent(new CustomEvent('bgm:kickstart', { detail: roomState.bgmState }));
+    const bgmState = roomState?.bgmState;
+    if (!bgmState?.currentTrackIndex) return;
+
+    const audio = document.getElementById('global-bgm');
+    const expectedSrc = `/soundtracks/Room${bgmState.currentTrackIndex}.mp3`;
+    const bgmKey = `${bgmState.currentTrackIndex}:${bgmState.startTime}`;
+    const needsKickstart = !audio?.src || !audio.src.includes(expectedSrc) || lastBgmKickstartRef.current !== bgmKey;
+
+    if (needsKickstart) {
+      lastBgmKickstartRef.current = bgmKey;
+      window.dispatchEvent(new CustomEvent('bgm:kickstart', { detail: bgmState }));
     }
-  }, []);
+  }, [roomState?.bgmState]);
+
+  useEffect(() => {
+    if (!roomState?.bgmState || bgmRetryAttachedRef.current) return;
+
+    function retryBgmPlayback() {
+      const audio = document.getElementById('global-bgm');
+      if (audio?.src && audio.paused) {
+        audio.play().catch(() => {});
+      }
+      bgmRetryAttachedRef.current = true;
+      window.removeEventListener('pointerdown', retryBgmPlayback);
+      window.removeEventListener('keydown', retryBgmPlayback);
+    }
+
+    window.addEventListener('pointerdown', retryBgmPlayback);
+    window.addEventListener('keydown', retryBgmPlayback);
+
+    return () => {
+      window.removeEventListener('pointerdown', retryBgmPlayback);
+      window.removeEventListener('keydown', retryBgmPlayback);
+    };
+  }, [roomState?.bgmState]);
   useEffect(() => {
     if (isRehydratingSession) return;
     if (!isConnected || !roomState) {
