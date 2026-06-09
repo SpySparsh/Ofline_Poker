@@ -42,6 +42,10 @@ function determineActivePlayers(room) {
     return room.players.filter(p => p.status === "active" && p.stack > 0);
 }
 
+function determinePlayersInHand(room) {
+    return room.players.filter(p => p.status === "active");
+}
+
 function startHand(room) {
   room.roomStatus = "playing";
   room.gameState.gameNumber += 1;
@@ -214,22 +218,23 @@ function advanceTurn(room) {
 }
 
 function isRoundComplete(room) {
-  const activePlayers = determineActivePlayers(room);
+  const playersInHand = determinePlayersInHand(room);
   
-  if (activePlayers.length <= 1) return true; // Everyone folded but one, or everyone all-in
+  if (playersInHand.length <= 1) return true; // Everyone folded but one
   
   const highestBet = room.gameState.currentRoundHighestBet;
   
   // BOTH conditions must be true for a round to complete:
-  // 1. Every active player with chips has contributed === highestBet
-  // 2. Every active player with chips has acted this round
-  const playersWithChips = activePlayers.filter(p => p.stack > 0);
+  // 1. Every player who can still act has contributed === highestBet
+  // 2. Every player who can still act has acted this round
+  const playersWhoCanAct = determineActivePlayers(room);
+  if (playersWhoCanAct.length === 0) return true;
   
-  const allContributionsMatch = playersWithChips.every(
+  const allContributionsMatch = playersWhoCanAct.every(
     p => p.currentRoundContribution === highestBet
   );
   
-  const allHaveActed = playersWithChips.every(
+  const allHaveActed = playersWhoCanAct.every(
     p => p.hasActedThisRound === true
   );
   
@@ -245,6 +250,11 @@ function advanceRound(room) {
      if (room.gameState.currentRound !== "showdown") {
          resetRoundContributions(room);
          takeSnapshot(room);
+         const playersWhoCanAct = determineActivePlayers(room);
+         if (playersWhoCanAct.length < 2) {
+            room.gameState.currentRound = "showdown";
+            return;
+         }
          // Set action to first active player left of dealer
          let firstActorIndex = (room.gameState.dealerIndex + 1) % room.players.length;
          while (room.players[firstActorIndex].status !== "active" || room.players[firstActorIndex].stack <= 0) {
