@@ -3,12 +3,49 @@
 import { useEffect, useRef } from "react";
 import { useSocket } from "@/context/SocketContext";
 
+const AUDIO_UNLOCKED_KEY = "audioUnlocked";
+const RECOVERY_DELAYS_MS = [250, 1000, 2000, 4000];
+
 export default function AudioEngine() {
   const { socket } = useSocket();
   const audioRef = useRef(null);
+  const recoveryTimerRef = useRef(null);
+  const recoveryAttemptsRef = useRef(0);
 
   useEffect(() => {
     if (!socket) return;
+
+    function clearRecoveryTimer() {
+      if (recoveryTimerRef.current) {
+        clearTimeout(recoveryTimerRef.current);
+        recoveryTimerRef.current = null;
+      }
+    }
+
+    function tryPlayBgm({ userGesture = false, scheduleRetry = false } = {}) {
+      const audio = audioRef.current;
+      if (!audio?.src || !audio.paused) return;
+
+      audio.play().then(() => {
+        if (userGesture) {
+          localStorage.setItem(AUDIO_UNLOCKED_KEY, "true");
+        }
+        clearRecoveryTimer();
+        recoveryAttemptsRef.current = 0;
+      }).catch(e => {
+        console.warn('BGM Autoplay blocked', e);
+        if (!scheduleRetry || localStorage.getItem(AUDIO_UNLOCKED_KEY) !== "true") return;
+
+        const delay = RECOVERY_DELAYS_MS[recoveryAttemptsRef.current];
+        if (!delay) return;
+
+        recoveryAttemptsRef.current += 1;
+        clearRecoveryTimer();
+        recoveryTimerRef.current = setTimeout(() => {
+          tryPlayBgm({ scheduleRetry: true });
+        }, delay);
+      });
+    }
 
     function onSyncTrack(bgmState) {
       if (!audioRef.current || !bgmState || !bgmState.currentTrackIndex) return;
@@ -27,10 +64,14 @@ export default function AudioEngine() {
         audioRef.current.src = expectedSrc;
         audioRef.current.currentTime = offsetSeconds;
         audioRef.current.volume = 0.3; // Default level
-        audioRef.current.play().catch(e => console.warn('BGM Autoplay blocked', e));
+        recoveryAttemptsRef.current = 0;
+        tryPlayBgm({ scheduleRetry: true });
       } else if (currentDrift > 2) {
         // Correct minor drift without completely reloading the src
         audioRef.current.currentTime = offsetSeconds;
+        tryPlayBgm({ scheduleRetry: true });
+      } else {
+        tryPlayBgm({ scheduleRetry: true });
       }
     }
 
@@ -45,9 +86,23 @@ export default function AudioEngine() {
     }
     window.addEventListener('bgm:kickstart', onKickstart);
 
+    function onUserAudioUnlock() {
+      const audio = audioRef.current;
+      if (audio?.src && !audio.paused) {
+        localStorage.setItem(AUDIO_UNLOCKED_KEY, "true");
+        return;
+      }
+      tryPlayBgm({ userGesture: true });
+    }
+    window.addEventListener('pointerdown', onUserAudioUnlock);
+    window.addEventListener('keydown', onUserAudioUnlock);
+
     return () => {
+      clearRecoveryTimer();
       socket.off('bgm:syncTrack', onSyncTrack);
       window.removeEventListener('bgm:kickstart', onKickstart);
+      window.removeEventListener('pointerdown', onUserAudioUnlock);
+      window.removeEventListener('keydown', onUserAudioUnlock);
     };
   }, [socket]);
 

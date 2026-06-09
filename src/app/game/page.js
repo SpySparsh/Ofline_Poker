@@ -19,7 +19,6 @@ export default function GamePage() {
   const [showRebuy, setShowRebuy] = useState(false);
   const { muted, toggleMute } = useAudio();
   const lastBgmKickstartRef = useRef("");
-  const bgmRetryAttachedRef = useRef(false);
 
   // Synchronized BGM for the game room (Admin DJ hook)
   useBGM(muted);
@@ -40,27 +39,6 @@ export default function GamePage() {
     }
   }, [roomState?.bgmState]);
 
-  useEffect(() => {
-    if (!roomState?.bgmState || bgmRetryAttachedRef.current) return;
-
-    function retryBgmPlayback() {
-      const audio = document.getElementById('global-bgm');
-      if (audio?.src && audio.paused) {
-        audio.play().catch(() => {});
-      }
-      bgmRetryAttachedRef.current = true;
-      window.removeEventListener('pointerdown', retryBgmPlayback);
-      window.removeEventListener('keydown', retryBgmPlayback);
-    }
-
-    window.addEventListener('pointerdown', retryBgmPlayback);
-    window.addEventListener('keydown', retryBgmPlayback);
-
-    return () => {
-      window.removeEventListener('pointerdown', retryBgmPlayback);
-      window.removeEventListener('keydown', retryBgmPlayback);
-    };
-  }, [roomState?.bgmState]);
   useEffect(() => {
     if (isRehydratingSession) return;
     if (!isConnected || !roomState) {
