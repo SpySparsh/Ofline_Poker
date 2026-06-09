@@ -10,7 +10,7 @@ import BuyInSelector from "@/components/BuyInSelector";
 import { Suspense } from "react";
 
 function LobbyContent() {
-  const { roomState, isAdmin, isConnected, socket, playerId } = useSocket();
+  const { roomState, isAdmin, isConnected, socket, playerId, isRehydratingSession } = useSocket();
   const router = useRouter();
   const searchParams = useSearchParams();
   const roomCode = searchParams.get("room");
@@ -19,6 +19,7 @@ function LobbyContent() {
 
   useEffect(() => {
     if (!isConnected) return;
+    if (isRehydratingSession) return;
     if (!roomState && roomCode) {
        // Need to join? In theory landing page handles joining.
        // But if they refresh on this page, SocketContext logic tries to rejoin if roomState exists.
@@ -26,13 +27,13 @@ function LobbyContent() {
        
        // Wait a beat to let Context try re-establishing if possible
        const t = setTimeout(() => {
-           if (!roomState && isConnected) {
+           if (!roomState && isConnected && !isRehydratingSession) {
                router.push("/");
            }
        }, 2000);
        return () => clearTimeout(t);
     }
-  }, [isConnected, roomState, roomCode, router]);
+  }, [isConnected, roomState, roomCode, isRehydratingSession, router]);
 
   useEffect(() => {
      if (roomState && roomState.roomStatus === "playing") {

@@ -14,7 +14,7 @@ import { useBGM } from "@/hooks/useBGM";
 import { useAudio } from "@/hooks/useAudio";
 
 export default function GamePage() {
-  const { roomState, playerId, isConnected, isAdmin, socket } = useSocket();
+  const { roomState, playerId, isConnected, isAdmin, socket, isRehydratingSession } = useSocket();
   const router = useRouter();
   const [showRebuy, setShowRebuy] = useState(false);
   const { muted, toggleMute } = useAudio();
@@ -29,9 +29,10 @@ export default function GamePage() {
     }
   }, []);
   useEffect(() => {
+    if (isRehydratingSession) return;
     if (!isConnected || !roomState) {
       const t = setTimeout(() => {
-        if (!roomState && isConnected) {
+        if (!roomState && isConnected && !isRehydratingSession) {
           router.push("/");
         }
       }, 2000);
@@ -44,7 +45,7 @@ export default function GamePage() {
     if (roomState && roomState.roomStatus === "lobby") {
       router.push(`/lobby?room=${roomState.roomId}`);
     }
-  }, [isConnected, roomState, router]);
+  }, [isConnected, roomState, isRehydratingSession, router]);
 
   if (!roomState) {
     return <div className="min-h-screen flex items-center justify-center"><div className="animate-pulse font-mono text-zinc-500">Loading Game...</div></div>;

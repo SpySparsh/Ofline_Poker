@@ -14,10 +14,12 @@ export function SocketProvider({ children }) {
   const [roomState, setRoomState] = useState(null);
   const [playerId, setPlayerId] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isRehydratingSession, setIsRehydratingSession] = useState(true);
   
   // Use refs so socket callbacks always see the latest values
   const roomStateRef = useRef(null);
   const playerIdRef = useRef("");
+  const reconnectInFlightRef = useRef(false);
   const prevPlayerCountRef = useRef(0);
   const prevRoundRef = useRef("");
 
@@ -37,6 +39,7 @@ export function SocketProvider({ children }) {
     localStorage.removeItem(PLAYER_NAME_KEY);
     setRoomState(null);
     setIsAdmin(false);
+    setIsRehydratingSession(false);
   }, []);
 
   useEffect(() => {
@@ -50,29 +53,40 @@ export function SocketProvider({ children }) {
     setPlayerId(id);
     playerIdRef.current = id;
 
-    socket.connect();
+    function reconnect() {
+      const savedRoomCode = localStorage.getItem(ROOM_CODE_KEY);
+      const savedPlayerId = localStorage.getItem(PLAYER_ID_KEY) || id;
+      const savedPlayerName = localStorage.getItem(PLAYER_NAME_KEY);
+      if (!savedRoomCode || !savedPlayerId) {
+        setIsRehydratingSession(false);
+        return;
+      }
+      if (reconnectInFlightRef.current) {
+        return;
+      }
+      reconnectInFlightRef.current = true;
+      setIsRehydratingSession(true);
+      socket.emit("room:reconnect", {
+        roomId: savedRoomCode,
+        playerId: savedPlayerId,
+        playerName: savedPlayerName || undefined,
+      }, (res) => {
+        reconnectInFlightRef.current = false;
+        if (res.success) {
+          localStorage.setItem(ROOM_CODE_KEY, res.room.roomId);
+          localStorage.setItem(PLAYER_ID_KEY, savedPlayerId);
+          if (savedPlayerName) {
+            localStorage.setItem(PLAYER_NAME_KEY, savedPlayerName);
+          }
+          onRoomUpdated(res.room);
+        }
+        setIsRehydratingSession(false);
+      });
+    }
 
     function onConnect() {
       setIsConnected(true);
-      const savedRoomCode = localStorage.getItem(ROOM_CODE_KEY);
-      const savedPlayerName = localStorage.getItem(PLAYER_NAME_KEY);
-      if (savedRoomCode && id && savedPlayerName) {
-        socket.emit("room:reconnect", {
-          roomId: savedRoomCode,
-          playerId: id,
-          playerName: savedPlayerName,
-        }, (res) => {
-          if (res.success) {
-            localStorage.setItem(ROOM_CODE_KEY, res.room.roomId);
-            localStorage.setItem(PLAYER_ID_KEY, id);
-            localStorage.setItem(PLAYER_NAME_KEY, savedPlayerName);
-            onRoomUpdated(res.room);
-          } else {
-            localStorage.removeItem(ROOM_CODE_KEY);
-            localStorage.removeItem(PLAYER_NAME_KEY);
-          }
-        });
-      }
+      reconnect();
     }
 
     function onDisconnect() {
@@ -154,6 +168,11 @@ export function SocketProvider({ children }) {
     socket.on("disconnect", onDisconnect);
     socket.on("room:updated", onRoomUpdated);
     socket.on("game:stateUpdate", onRoomUpdated);
+    if (socket.connected) {
+      onConnect();
+    } else {
+      socket.connect();
+    }
 
     return () => {
       socket.off("connect", onConnect);
@@ -165,7 +184,7 @@ export function SocketProvider({ children }) {
   }, []);
 
   return (
-    <SocketContext.Provider value={{ isConnected, roomState, playerId, isAdmin, socket, leaveRoom }}>
+    <SocketContext.Provider value={{ isConnected, roomState, playerId, isAdmin, isRehydratingSession, socket, leaveRoom }}>
       {children}
     </SocketContext.Provider>
   );

@@ -5,19 +5,20 @@ import { useRouter } from "next/navigation";
 import { useSocket } from "@/context/SocketContext";
 
 export default function StatsPage() {
-  const { roomState, playerId, isConnected } = useSocket();
+  const { roomState, playerId, isConnected, isRehydratingSession } = useSocket();
   const router = useRouter();
 
   useEffect(() => {
+    if (isRehydratingSession) return;
     if (!isConnected || !roomState) {
         const t = setTimeout(() => {
-            if (!roomState && isConnected) {
+            if (!roomState && isConnected && !isRehydratingSession) {
                 router.push("/");
             }
         }, 2000);
         return () => clearTimeout(t);
     }
-  }, [isConnected, roomState, router]);
+  }, [isConnected, roomState, isRehydratingSession, router]);
 
   if (!roomState) {
      return <div className="min-h-screen flex items-center justify-center"><div className="animate-pulse">Loading Stats...</div></div>;
