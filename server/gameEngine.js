@@ -255,8 +255,10 @@ function advanceRound(room) {
             room.gameState.currentRound = "showdown";
             return;
          }
-         // Set action to first active player left of dealer
-         let firstActorIndex = (room.gameState.dealerIndex + 1) % room.players.length;
+         // Set action to the street starter for the configured blind mode
+         let firstActorIndex = room.settings.blindMode === "ante_all"
+            ? room.gameState.dealerIndex
+            : (room.gameState.dealerIndex + 1) % room.players.length;
          while (room.players[firstActorIndex].status !== "active" || room.players[firstActorIndex].stack <= 0) {
             firstActorIndex = (firstActorIndex + 1) % room.players.length;
          }
