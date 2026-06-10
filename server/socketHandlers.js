@@ -18,7 +18,7 @@ function handlePlayerLeave(io, socket, roomId, playerId) {
   
   if (removed && room) {
     if (room.roomStatus === "playing") {
-      const canAct = p => p.status === "active" && p.stack > 0;
+      const canAct = p => p.inCurrentHand !== false && !p.isSittingOut && p.status === "active" && p.stack > 0;
       let loops = 0;
       while (room.players.length > 0 && !canAct(room.players[room.gameState.activePlayerIndex]) && loops < room.players.length) {
         room.gameState.activePlayerIndex = (room.gameState.activePlayerIndex + 1) % room.players.length;
@@ -130,6 +130,8 @@ function mountSocketHandlers(io) {
           if (player) {
              player.stack = amount;
              player.totalBoughtIn = amount;
+             player.isSittingOut = false;
+             player.inCurrentHand = false;
              io.to(roomId).emit("room:updated", room);
           }
        }
@@ -149,9 +151,12 @@ function mountSocketHandlers(io) {
     });
 
     // GAME: ACTION (Bet, Call, Fold, Check)
-    socket.on("game:action", ({ roomId, playerId, action, amount }) => {
+    socket.on("game:action", ({ roomId, playerId, action, amount }, callback) => {
        const room = getRoom(roomId);
-       if(!room) return;
+       if(!room) {
+          if (callback) callback({ success: false, message: "Room not found" });
+          return;
+       }
        
        const success = gameEngine.handleAction(room, playerId, action, amount);
        if (success) {
@@ -164,6 +169,7 @@ function mountSocketHandlers(io) {
                gameEngine.resolveShowdown(room, [remaining.id]);
                room.gameState.currentRound = "showdown";
                io.to(roomId).emit("game:stateUpdate", room);
+               if (callback) callback({ success: true });
                return;
            }
 
@@ -173,27 +179,39 @@ function mountSocketHandlers(io) {
                gameEngine.advanceTurn(room);
            }
            io.to(roomId).emit("game:stateUpdate", room);
+           if (callback) callback({ success: true });
+       } else if (callback) {
+           callback({ success: false, message: "Invalid or stale action" });
        }
     });
 
     // GAME: SHOWDOWN VOTE
-    socket.on("game:showdownVote", ({ roomId, playerId, vote }) => {
+    socket.on("game:showdownVote", ({ roomId, playerId, vote }, callback) => {
        const room = getRoom(roomId);
-       if(!room) return;
+       if(!room) {
+          if (callback) callback({ success: false, message: "Room not found" });
+          return;
+       }
 
        const result = gameEngine.handleShowdownVote(room, playerId, vote);
        if (result === "ALL_LOST") {
            io.to(roomId).emit("game:stateUpdate", room);
+           if (callback) callback({ success: true, result });
        } else if (result === "WINNER_CONSENSUS") {
            const winners = room.gameState.showdownVotes.filter(v => v.vote === "WON").map(v => v.playerId);
            gameEngine.resolveShowdown(room, winners);
            io.to(roomId).emit("game:stateUpdate", room);
+           if (callback) callback({ success: true, result });
        } else if (result === "TIE_CONSENSUS") {
            const winners = room.gameState.showdownVotes.filter(v => v.vote === "WON").map(v => v.playerId);
            gameEngine.resolveShowdown(room, winners);
            io.to(roomId).emit("game:stateUpdate", room);
+           if (callback) callback({ success: true, result });
+       } else if (result === "DUPLICATE" || result === "REJECTED") {
+           if (callback) callback({ success: false, result });
        } else {
            io.to(roomId).emit("game:stateUpdate", room);
+           if (callback) callback({ success: true, result });
        }
     });
 

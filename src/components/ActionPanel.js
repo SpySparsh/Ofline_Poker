@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSocket } from "@/context/SocketContext";
 import { ChipTray } from "@/components/ChipIcon";
 import { useAudio } from "@/hooks/useAudio";
@@ -8,38 +8,60 @@ import { useAudio } from "@/hooks/useAudio";
 export default function ActionPanel({ roomState }) {
   const { socket, playerId } = useSocket();
   const { playChipSound, playSfx } = useAudio();
-  const [stagedAmount, setStagedAmount] = useState(0);
-  const [isConfirming, setIsConfirming] = useState(false);
-  const [selectedDenomination, setSelectedDenomination] = useState(null);
+  const [betState, setBetState] = useState({
+    turnKey: "",
+    stagedAmount: 0,
+    isConfirming: false,
+    selectedDenomination: null,
+  });
+  const [submittedActionKey, setSubmittedActionKey] = useState("");
 
   const me = roomState?.players.find(p => p.id === playerId);
   const myIndex = roomState?.players.findIndex(p => p.id === playerId);
-  const isMyTurn = roomState?.gameState.activePlayerIndex === myIndex;
-  
+  const turnKey = [
+    roomState?.gameState.currentRound,
+    roomState?.gameState.activePlayerIndex,
+    roomState?.gameState.currentRoundHighestBet,
+    me?.currentRoundContribution,
+    me?.stack,
+  ].join(":");
+  const isSittingOut = me?.isSittingOut || me?.inCurrentHand === false;
+  const isMyTurn = !isSittingOut && roomState?.gameState.activePlayerIndex === myIndex;
+  const isCurrentBetState = betState.turnKey === turnKey;
+  const stagedAmount = isCurrentBetState ? betState.stagedAmount : 0;
+  const isConfirming = isCurrentBetState ? betState.isConfirming : false;
+  const selectedDenomination = isCurrentBetState ? betState.selectedDenomination : null;
+  const isActionLocked = submittedActionKey === turnKey;
+
+  const resetBetState = () => {
+    setBetState({
+      turnKey,
+      stagedAmount: 0,
+      isConfirming: false,
+      selectedDenomination: null,
+    });
+  };
+
   if (!me) return null;
 
   const highestBet = roomState.gameState.currentRoundHighestBet;
   const amountToCall = Math.max(0, highestBet - me.currentRoundContribution);
   const canCheck = amountToCall === 0;
 
-  // Reset staged amount when turn changes
-  useEffect(() => {
-    if (isMyTurn) {
-      setStagedAmount(0);
-      setIsConfirming(false);
-      setSelectedDenomination(null);
-    }
-  }, [isMyTurn]);
-
   const handleAction = (action, amount = 0) => {
+    if (isActionLocked) return;
+    setSubmittedActionKey(turnKey);
     playSfx("click");
-    socket.emit("game:action", { roomId: roomState.roomId, playerId, action, amount });
-    setStagedAmount(0);
-    setIsConfirming(false);
-    setSelectedDenomination(null);
+    socket.emit("game:action", { roomId: roomState.roomId, playerId, action, amount }, (res) => {
+      if (!res?.success) {
+        setSubmittedActionKey("");
+      }
+    });
+    resetBetState();
   };
 
   const handleAddChip = (denomination) => {
+    if (isActionLocked) return;
     // Play chip sound based on denomination
     playChipSound(denomination);
     
@@ -47,18 +69,30 @@ export default function ActionPanel({ roomState }) {
     const maxBet = me.stack - amountToCall;
     const newAmount = Math.min(stagedAmount + denomination, maxBet);
     if (newAmount > stagedAmount) {
-      setStagedAmount(newAmount);
-      setSelectedDenomination(denomination);
+      setBetState({
+        turnKey,
+        stagedAmount: newAmount,
+        isConfirming,
+        selectedDenomination: denomination,
+      });
     }
   };
 
   const handleClearStaged = () => {
-    setStagedAmount(0);
-    setIsConfirming(false);
-    setSelectedDenomination(null);
+    resetBetState();
   };
 
   // NOT MY TURN — compact waiting display
+  if (isSittingOut) {
+    return (
+      <div className="glass-panel px-3 py-2 md:py-3 w-full max-w-2xl mx-auto flex items-center justify-center bg-black/80">
+        <div className="text-zinc-500 font-semibold text-[11px] md:text-xs uppercase tracking-widest">
+          Sitting out this hand
+        </div>
+      </div>
+    );
+  }
+
   if (!isMyTurn) {
     const activePlayer = roomState.players[roomState.gameState.activePlayerIndex];
     return (
@@ -110,7 +144,8 @@ export default function ActionPanel({ roomState }) {
         {/* Fold */}
         <button 
           onClick={() => handleAction("fold")}
-          className="md:flex-shrink-0 min-h-16 md:min-h-0 px-3 md:px-4 py-4 md:py-2.5 bg-red-600/80 hover:bg-red-500 text-white font-bold text-sm md:text-xs uppercase tracking-wider rounded-xl md:rounded-lg transition-all active:scale-95"
+          disabled={isActionLocked}
+          className="md:flex-shrink-0 min-h-16 md:min-h-0 px-3 md:px-4 py-4 md:py-2.5 bg-red-600/80 hover:bg-red-500 text-white font-bold text-sm md:text-xs uppercase tracking-wider rounded-xl md:rounded-lg transition-all active:scale-95 disabled:opacity-45 disabled:saturate-50 disabled:pointer-events-none"
         >
           Fold
         </button>
@@ -118,7 +153,8 @@ export default function ActionPanel({ roomState }) {
         {/* Check / Call */}
         <button 
           onClick={() => handleAction(canCheck ? "check" : "call")}
-          className="md:flex-shrink-0 min-h-16 md:min-h-0 px-3 md:px-4 py-4 md:py-2.5 bg-zinc-700 hover:bg-zinc-600 text-white font-bold text-sm md:text-xs uppercase tracking-wider rounded-xl md:rounded-lg transition-all active:scale-95 flex items-center justify-center gap-1.5"
+          disabled={isActionLocked}
+          className="md:flex-shrink-0 min-h-16 md:min-h-0 px-3 md:px-4 py-4 md:py-2.5 bg-zinc-700 hover:bg-zinc-600 text-white font-bold text-sm md:text-xs uppercase tracking-wider rounded-xl md:rounded-lg transition-all active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-45 disabled:saturate-50 disabled:pointer-events-none"
         >
           {canCheck ? "Check" : "Call"}
           {!canCheck && <span className="font-mono text-emerald-300 text-sm md:text-xs">{amountToCall.toLocaleString()}</span>}
@@ -128,15 +164,21 @@ export default function ActionPanel({ roomState }) {
         {canRaise && (
           <button 
             onClick={() => {
+              if (isActionLocked) return;
               if (stagedAmount <= 0) return;
               if (!isConfirming) {
-                setIsConfirming(true);
+                setBetState({
+                  turnKey,
+                  stagedAmount,
+                  isConfirming: true,
+                  selectedDenomination,
+                });
                 return;
               }
               // Second click → fire
               handleAction(canCheck ? "bet" : "raise", totalRaiseAmount);
             }}
-            disabled={stagedAmount <= 0}
+            disabled={stagedAmount <= 0 || isActionLocked}
             className={`md:flex-1 min-h-16 md:min-h-0 px-3 md:px-4 py-4 md:py-2.5 font-bold text-sm md:text-xs uppercase tracking-wider rounded-xl md:rounded-lg transition-all active:scale-95 flex items-center justify-center gap-1.5 ${
               isConfirming 
                 ? "bg-emerald-500 hover:bg-emerald-400 text-white shadow-[0_0_20px_rgba(16,185,129,0.55)] animate-pulse-subtle"

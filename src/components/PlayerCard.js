@@ -5,9 +5,12 @@ import { MiniChipStack } from "@/components/ChipIcon";
 export default function PlayerCard({ player, isCurrentTurn, isMe }) {
   const isFolded = player.status === "folded";
   const isAllIn = player.stack === 0 && player.status === "active";
+  const isSittingOut = player.isSittingOut || player.inCurrentHand === false;
   
   let ringClasses = "border-white/10";
-  if (isCurrentTurn) {
+  if (isSittingOut) {
+    ringClasses = "opacity-35 grayscale border-dashed border-zinc-700 bg-black/20 text-zinc-600";
+  } else if (isCurrentTurn) {
     ringClasses = "animate-turn-glow border-amber-400 bg-amber-950/20";
   } else if (isFolded) {
     ringClasses = "opacity-35 border-dashed border-zinc-700 bg-black/20 text-zinc-600";
@@ -45,7 +48,9 @@ export default function PlayerCard({ player, isCurrentTurn, isMe }) {
         </div>
         
         <div className="flex flex-col items-center justify-center text-center">
-          {!isFolded ? (
+          {isSittingOut ? (
+            <div className="text-[10px] md:text-[10px] font-bold tracking-widest uppercase text-zinc-600">Sitting Out</div>
+          ) : !isFolded ? (
             <>
               <div className={`font-mono font-bold text-base md:text-base leading-tight ${isAllIn ? 'text-red-400' : 'text-zinc-200'}`}>
                 {isAllIn ? "ALL-IN" : player.stack.toLocaleString()}

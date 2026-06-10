@@ -65,6 +65,7 @@ export default function GamePage() {
 
   const { gameState, players } = roomState;
   const isShowdown = gameState.currentRound === "showdown";
+  const me = players.find(p => p.id === playerId);
 
   // Re-order players so current player is always at the bottom center
   const myIndex = players.findIndex(p => p.id === playerId);
@@ -77,7 +78,7 @@ export default function GamePage() {
   // Split into top row and bottom row
   const topPlayers = displayPlayers.slice(0, Math.floor(displayPlayers.length / 2));
   const bottomPlayers = displayPlayers.slice(Math.floor(displayPlayers.length / 2));
-  const isMyTurn = !isShowdown && myIndex !== -1 && gameState.activePlayerIndex === myIndex;
+  const isMyTurn = !isShowdown && myIndex !== -1 && !me?.isSittingOut && me?.inCurrentHand !== false && gameState.activePlayerIndex === myIndex;
   const tableWrapperClasses = isMyTurn
     ? "flex-1 flex flex-col items-center justify-center px-2 pt-0 pb-1 md:py-2 min-h-0"
     : "flex-1 flex flex-col items-center justify-start px-2 pt-0 pb-1 md:py-2 md:justify-center min-h-0";

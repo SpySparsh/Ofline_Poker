@@ -35,6 +35,8 @@ function createRoom(adminId, adminName) {
         name: adminName,
         stack: 0,
         status: "active", // active | folded | waiting
+        isSittingOut: false,
+        inCurrentHand: false,
         currentRoundContribution: 0,
         totalHandContribution: 0,
         isDealer: true,
@@ -79,6 +81,8 @@ function joinRoom(roomId, playerId, playerName) {
     name: playerName,
     stack: 0,
     status: room.roomStatus === "lobby" ? "active" : "waiting", // Waiting if game in progress
+    isSittingOut: room.roomStatus !== "lobby",
+    inCurrentHand: false,
     currentRoundContribution: 0,
     totalHandContribution: 0,
     isDealer: false,

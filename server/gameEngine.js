@@ -38,12 +38,27 @@ function resetRoundContributions(room) {
   room.gameState.currentRoundHighestBet = 0;
 }
 
+function getMinimumStackForHand(room) {
+    if (room.settings.blindMode === "ante_all") {
+        return room.settings.ante;
+    }
+    return 1;
+}
+
+function isEligibleForNextHand(room, player) {
+    return player.stack >= getMinimumStackForHand(room);
+}
+
+function isInCurrentHand(player) {
+    return player.inCurrentHand !== false && !player.isSittingOut;
+}
+
 function determineActivePlayers(room) {
-    return room.players.filter(p => p.status === "active" && p.stack > 0);
+    return room.players.filter(p => isInCurrentHand(p) && p.status === "active" && p.stack > 0);
 }
 
 function determinePlayersInHand(room) {
-    return room.players.filter(p => p.status === "active");
+    return room.players.filter(p => isInCurrentHand(p) && p.status === "active");
 }
 
 function startHand(room) {
@@ -55,15 +70,19 @@ function startHand(room) {
   room.gameState.showdownVotes = [];
   room.gameState.lastHandWinners = [];
   
-  // Bring waiting players into active
+  // Lock the participant set for this hand. Rebuys during the hand do not change this.
   room.players.forEach(p => {
-    if (p.status === "waiting" && p.stack > 0) {
+    const canPlayThisHand = isEligibleForNextHand(room, p);
+    p.inCurrentHand = canPlayThisHand;
+    p.isSittingOut = !canPlayThisHand;
+    if (canPlayThisHand) {
       p.status = "active";
-    } else if (p.status === "folded" && p.stack > 0) {
-      p.status = "active";
+    } else {
+      p.status = "waiting";
     }
     p.currentRoundContribution = 0;
     p.totalHandContribution = 0;
+    p.hasActedThisRound = false;
   });
 
   const activePlayers = determineActivePlayers(room);
@@ -73,8 +92,8 @@ function startHand(room) {
   if (room.gameState.gameNumber > 1) {
      if (room.settings.sequenceMode === "standard") {
         room.gameState.dealerIndex = (room.gameState.dealerIndex + 1) % room.players.length;
-        // Skip players with 0 stack or waiting
-        while (room.players[room.gameState.dealerIndex].stack <= 0 || room.players[room.gameState.dealerIndex].status === "waiting") {
+        // Skip players who are not locked into this hand
+        while (!isInCurrentHand(room.players[room.gameState.dealerIndex]) || room.players[room.gameState.dealerIndex].status === "waiting") {
            room.gameState.dealerIndex = (room.gameState.dealerIndex + 1) % room.players.length;
         }
      }
@@ -98,7 +117,7 @@ function startHand(room) {
   if (room.settings.blindMode === "ante_all") {
     // Everyone pays ante
     room.players.forEach(p => {
-      if (p.status === "active" && p.stack > 0) {
+      if (isInCurrentHand(p) && p.status === "active" && p.stack > 0) {
         const anteAmt = Math.min(p.stack, room.settings.ante);
         p.stack -= anteAmt;
         p.currentRoundContribution += anteAmt;
@@ -113,10 +132,10 @@ function startHand(room) {
     // Standard Small / Big Blind
     let sbIndex = (room.gameState.dealerIndex + 1) % numPlayers;
     // ensure active
-    while(room.players[sbIndex].status !== 'active') { sbIndex = (sbIndex + 1) % numPlayers; }
+    while(!isInCurrentHand(room.players[sbIndex]) || room.players[sbIndex].status !== 'active') { sbIndex = (sbIndex + 1) % numPlayers; }
     
     let bbIndex = (sbIndex + 1) % numPlayers;
-    while(room.players[bbIndex].status !== 'active') { bbIndex = (bbIndex + 1) % numPlayers; }
+    while(!isInCurrentHand(room.players[bbIndex]) || room.players[bbIndex].status !== 'active') { bbIndex = (bbIndex + 1) % numPlayers; }
 
     const sbPlayer = room.players[sbIndex];
     if (sbPlayer) {
@@ -140,9 +159,20 @@ function startHand(room) {
     firstActorIndex = (bbIndex + 1) % numPlayers;
   }
 
+  const playersWhoCanActAfterForcedBets = determineActivePlayers(room);
+  if (playersWhoCanActAfterForcedBets.length === 0) {
+     room.gameState.activePlayerIndex = room.gameState.dealerIndex;
+     room.gameState.currentRound = "showdown";
+     room.gameState.roundHistory = [];
+     takeSnapshot(room);
+     return true;
+  }
+
   // Find next valid actor
-  while (room.players[firstActorIndex].status !== "active" || room.players[firstActorIndex].stack <= 0) {
+  let actorLoops = 0;
+  while ((!isInCurrentHand(room.players[firstActorIndex]) || room.players[firstActorIndex].status !== "active" || room.players[firstActorIndex].stack <= 0) && actorLoops < numPlayers) {
      firstActorIndex = (firstActorIndex + 1) % numPlayers;
+     actorLoops++;
   }
   room.gameState.activePlayerIndex = firstActorIndex;
 
@@ -157,9 +187,14 @@ function startHand(room) {
 
 function handleAction(room, playerId, action, amount = 0) {
   const player = room.players.find(p => p.id === playerId);
-  if (!player || player.status !== "active") return false;
+  if (!player || !isInCurrentHand(player) || player.status !== "active" || player.stack <= 0) return false;
+  if (room.gameState.currentRound === "showdown") return false;
+
+  const activePlayer = room.players[room.gameState.activePlayerIndex];
+  if (!activePlayer || activePlayer.id !== playerId) return false;
 
   const highestBet = room.gameState.currentRoundHighestBet;
+  const amountToCall = Math.max(0, highestBet - player.currentRoundContribution);
 
   switch (action) {
     case "fold":
@@ -167,9 +202,11 @@ function handleAction(room, playerId, action, amount = 0) {
       break;
     case "check":
       // Valid if player.currentRoundContribution === highestBet
+      if (amountToCall !== 0) return false;
       break;
     case "call":
       {
+        if (amountToCall <= 0) return false;
         const amountToCall = highestBet - player.currentRoundContribution;
         const actualCall = Math.min(player.stack, amountToCall);
         player.stack -= actualCall;
@@ -181,6 +218,9 @@ function handleAction(room, playerId, action, amount = 0) {
     case "raise":
     case "bet":
       {
+         if (!Number.isFinite(amount) || amount <= 0 || amount > player.stack) return false;
+         if (action === "bet" && amountToCall !== 0) return false;
+         if (action === "raise" && amountToCall <= 0) return false;
          const totalContributed = player.currentRoundContribution + amount;
          player.stack -= amount;
          player.currentRoundContribution += amount;
@@ -190,7 +230,7 @@ function handleAction(room, playerId, action, amount = 0) {
              room.gameState.currentRoundHighestBet = totalContributed;
              // A raise reopens action for everyone else
              room.players.forEach(p => {
-               if (p.id !== playerId && p.status === "active" && p.stack > 0) {
+               if (p.id !== playerId && isInCurrentHand(p) && p.status === "active" && p.stack > 0) {
                  p.hasActedThisRound = false;
                }
              });
@@ -211,7 +251,7 @@ function advanceTurn(room) {
   
   // Loop until we find active player who hasn't folded and has stack > 0
   let loops = 0;
-  while ((room.players[nextIndex].status !== "active" || room.players[nextIndex].stack <= 0) && loops < numPlayers) {
+  while ((!isInCurrentHand(room.players[nextIndex]) || room.players[nextIndex].status !== "active" || room.players[nextIndex].stack <= 0) && loops < numPlayers) {
      nextIndex = (nextIndex + 1) % numPlayers;
      loops++;
   }
@@ -260,7 +300,7 @@ function advanceRound(room) {
          let firstActorIndex = room.settings.blindMode === "ante_all"
             ? room.gameState.dealerIndex
             : (room.gameState.dealerIndex + 1) % room.players.length;
-         while (room.players[firstActorIndex].status !== "active" || room.players[firstActorIndex].stack <= 0) {
+         while (!isInCurrentHand(room.players[firstActorIndex]) || room.players[firstActorIndex].status !== "active" || room.players[firstActorIndex].stack <= 0) {
             firstActorIndex = (firstActorIndex + 1) % room.players.length;
          }
          room.gameState.activePlayerIndex = firstActorIndex;
@@ -269,7 +309,7 @@ function advanceRound(room) {
 }
 
 function checkOnlyOnePlayerLeft(room) {
-   const nonFolded = room.players.filter(p => p.status === "active");
+   const nonFolded = determinePlayersInHand(room);
    if (nonFolded.length === 1) {
        return nonFolded[0];
    }
@@ -277,10 +317,16 @@ function checkOnlyOnePlayerLeft(room) {
 }
 
 function handleShowdownVote(room, playerId, vote) {
+   const player = room.players.find(p => p.id === playerId);
+   if (room.gameState.currentRound !== "showdown" || room.gameState.pot <= 0) return "REJECTED";
+   if (!player || !isInCurrentHand(player) || player.status !== "active") return "PENDING";
+   if (vote !== "WON" && vote !== "LOST") return "REJECTED";
+   if (room.gameState.showdownVotes.some(v => v.playerId === playerId)) return "DUPLICATE";
+
    room.gameState.showdownVotes = room.gameState.showdownVotes.filter(v => v.playerId !== playerId);
    room.gameState.showdownVotes.push({ playerId, vote });
    
-   const activePlayers = room.players.filter(p => p.status === "active");
+   const activePlayers = determinePlayersInHand(room);
    
    if (room.gameState.showdownVotes.length === activePlayers.length) {
        // Evaluate consensus

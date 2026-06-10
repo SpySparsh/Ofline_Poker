@@ -1,23 +1,39 @@
 "use client";
 
+import { useState } from "react";
 import { useSocket } from "@/context/SocketContext";
 
 export default function ShowdownPanel({ roomState }) {
   const { socket, playerId, isAdmin } = useSocket();
+  const [submittedVoteKey, setSubmittedVoteKey] = useState("");
   const me = roomState?.players.find(p => p.id === playerId);
   
   if (!me || roomState?.gameState.currentRound !== "showdown") return null;
-
-  const handleVote = (vote) => {
-      socket.emit("game:showdownVote", { roomId: roomState.roomId, playerId, vote });
-  };
 
   const handleNextHand = () => {
       socket.emit("game:nextHand", { roomId: roomState.roomId });
   };
 
   const isFolded = me.status === "folded";
+  const isSittingOut = me.isSittingOut || me.inCurrentHand === false;
   const myVote = roomState.gameState.showdownVotes.find(v => v.playerId === playerId)?.vote;
+  const voteKey = [
+    roomState.gameState.currentRound,
+    roomState.gameState.pot,
+    myVote || "",
+    roomState.gameState.showdownVotes.length,
+  ].join(":");
+  const isVoteLocked = submittedVoteKey === voteKey;
+
+  const handleVote = (vote) => {
+      if (isVoteLocked || myVote) return;
+      setSubmittedVoteKey(voteKey);
+      socket.emit("game:showdownVote", { roomId: roomState.roomId, playerId, vote }, (res) => {
+        if (!res?.success || res.result === "ALL_LOST") {
+          setSubmittedVoteKey("");
+        }
+      });
+  };
   
   // Has everyone voted? (Backend handles resolution when consensus is reached, but while waiting or if resolved)
   // Wait, if it resolved, pot might be 0, and we are just waiting for Next Hand.
@@ -45,6 +61,16 @@ export default function ShowdownPanel({ roomState }) {
                   DEAL NEXT HAND
                </button>
             )}
+        </div>
+     );
+  }
+
+  if (isSittingOut) {
+     return (
+        <div className="glass-panel p-4 w-full max-w-2xl mx-auto flex items-center justify-center bg-black/80 animate-pop">
+            <div className="text-zinc-500 font-bold uppercase tracking-widest text-sm">
+               Sitting out this hand
+            </div>
         </div>
      );
   }
@@ -77,13 +103,15 @@ export default function ShowdownPanel({ roomState }) {
           <div className="flex flex-col sm:flex-row gap-4">
              <button 
                 onClick={() => handleVote("WON")}
-                className="flex-1 py-8 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-800 text-white font-bold text-2xl tracking-widest uppercase shadow-lg shadow-emerald-500/20 active:scale-95 transition-all"
+                disabled={isVoteLocked}
+                className="flex-1 py-8 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-800 text-white font-bold text-2xl tracking-widest uppercase shadow-lg shadow-emerald-500/20 active:scale-95 transition-all disabled:opacity-45 disabled:saturate-50 disabled:pointer-events-none"
              >
                 I Won
              </button>
              <button 
                 onClick={() => handleVote("LOST")}
-                className="flex-1 py-8 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-900 border border-zinc-600 text-zinc-300 font-bold text-2xl tracking-widest uppercase hover:text-white active:scale-95 transition-all"
+                disabled={isVoteLocked}
+                className="flex-1 py-8 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-900 border border-zinc-600 text-zinc-300 font-bold text-2xl tracking-widest uppercase hover:text-white active:scale-95 transition-all disabled:opacity-45 disabled:saturate-50 disabled:pointer-events-none"
              >
                 I Lost
              </button>
