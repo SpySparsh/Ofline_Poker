@@ -64,6 +64,9 @@ function determinePlayersInHand(room) {
 }
 
 function startHand(room) {
+  const eligiblePlayers = room.players.filter(p => isEligibleForNextHand(room, p));
+  if (eligiblePlayers.length < 2) return false;
+
   room.roomStatus = "playing";
   room.gameState.gameNumber += 1;
   room.gameState.currentRound = "pre-flop";
@@ -87,9 +90,6 @@ function startHand(room) {
     p.totalHandContribution = 0;
     p.hasActedThisRound = false;
   });
-
-  const activePlayers = determineActivePlayers(room);
-  if (activePlayers.length < 2) return false;
 
   // Move dealer button logic
   if (room.gameState.gameNumber > 1) {
@@ -189,6 +189,9 @@ function startHand(room) {
 }
 
 function handleAction(room, playerId, action, amount = 0) {
+  const validActions = new Set(["fold", "check", "call", "raise", "bet"]);
+  if (!validActions.has(action)) return false;
+
   const player = room.players.find(p => p.id === playerId);
   if (!player || !isInCurrentHand(player) || player.status !== "active" || player.stack <= 0) return false;
   if (room.gameState.currentRound === "showdown") return false;
@@ -321,7 +324,7 @@ function checkOnlyOnePlayerLeft(room) {
 function handleShowdownVote(room, playerId, vote) {
    const player = room.players.find(p => p.id === playerId);
    if (room.gameState.currentRound !== "showdown" || room.gameState.pot <= 0) return "REJECTED";
-   if (!player || !isInCurrentHand(player) || player.status !== "active") return "PENDING";
+   if (!player || !isInCurrentHand(player) || player.status !== "active") return "REJECTED";
    if (vote !== "WON" && vote !== "LOST") return "REJECTED";
    if (room.gameState.showdownVotes.some(v => v.playerId === playerId)) return "DUPLICATE";
 
@@ -348,30 +351,39 @@ function handleShowdownVote(room, playerId, vote) {
 
 function resolveShowdown(room, winners) {
    // winners is array of playerId strings
-   room.gameState.lastHandWinners = winners
+   if (!Array.isArray(winners) || winners.length === 0) return false;
+   if (!Number.isFinite(room.gameState.pot) || room.gameState.pot <= 0) return false;
+
+   const validWinnerIds = [...new Set(winners)].filter(id => {
+     const player = room.players.find(p => p.id === id);
+     return player && isInCurrentHand(player) && player.status === "active";
+   });
+   if (validWinnerIds.length === 0) return false;
+
+   room.gameState.lastHandWinners = validWinnerIds
      .map(id => {
        const player = room.players.find(p => p.id === id);
        return player ? { id: player.id, name: player.name } : null;
      })
      .filter(Boolean);
 
-   const splitAmount = Math.floor(room.gameState.pot / winners.length);
+   const splitAmount = Math.floor(room.gameState.pot / validWinnerIds.length);
    
    room.players.forEach(p => {
-       if (winners.includes(p.id)) {
+       if (validWinnerIds.includes(p.id)) {
            p.stack += splitAmount;
        }
    });
    // Leave remaining odd chips in pot, or give to first winner
-   const remainder = room.gameState.pot - (splitAmount * winners.length);
-   if (remainder > 0 && winners.length > 0) {
-       const firstWinner = room.players.find(p => p.id === winners[0]);
+   const remainder = room.gameState.pot - (splitAmount * validWinnerIds.length);
+   if (remainder > 0) {
+       const firstWinner = room.players.find(p => p.id === validWinnerIds[0]);
        if (firstWinner) firstWinner.stack += remainder;
    }
    
   // Winner's Curse: winner becomes last in next hand sequence
-  if (room.settings.sequenceMode === "winner_curse" && winners.length > 0) {
-     const winnerIdx = room.players.findIndex(p => p.id === winners[0]);
+  if (room.settings.sequenceMode === "winner_curse") {
+     const winnerIdx = room.players.findIndex(p => p.id === validWinnerIds[0]);
      if (winnerIdx !== -1) {
        let nextDealerIndex = (winnerIdx + 1) % room.players.length;
        while ((room.players[nextDealerIndex].stack <= 0 || room.players[nextDealerIndex].status === "waiting") && nextDealerIndex !== winnerIdx) {
@@ -382,6 +394,7 @@ function resolveShowdown(room, winners) {
   }
    
    room.gameState.pot = 0;
+   return true;
 }
 
 function concludeGame(room) {
@@ -395,9 +408,16 @@ function concludeGame(room) {
 
 function rebuy(room, playerId, amount) {
   const p = room.players.find(p => p.id === playerId);
-  if (p) {
-      p.stack += amount;
-      p.totalBoughtIn = (p.totalBoughtIn || 0) + amount;
+  const rebuyAmount = Number(amount);
+  if (
+    p &&
+    Number.isFinite(rebuyAmount) &&
+    rebuyAmount > 0 &&
+    Number.isSafeInteger(rebuyAmount) &&
+    Number.isSafeInteger(p.stack + rebuyAmount)
+  ) {
+      p.stack += rebuyAmount;
+      p.totalBoughtIn = (p.totalBoughtIn || 0) + rebuyAmount;
       return true;
   }
   return false;
