@@ -48,6 +48,7 @@ function createRoom(adminId, adminName) {
       pot: 0,
       currentRoundHighestBet: 0,
       activePlayerIndex: 0,
+      turnVersion: 0,
       dealerIndex: 0,
       roundHistory: [], // For undo functionality
       showdownVotes: [], // Array of { playerId, vote: "WON" | "LOST" }

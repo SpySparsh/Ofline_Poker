@@ -158,7 +158,21 @@ function mountSocketHandlers(io) {
           return;
        }
        
-       const success = gameEngine.handleAction(room, playerId, action, amount);
+       let success = false;
+       try {
+          success = gameEngine.handleAction(room, playerId, action, amount);
+       } catch (error) {
+          console.error("[game:action] failed", {
+             roomId,
+             playerId,
+             action,
+             activePlayerIndex: room.gameState.activePlayerIndex,
+             activePlayerId: room.players[room.gameState.activePlayerIndex]?.id,
+             error: error.message,
+          });
+          if (callback) callback({ success: false, message: "Action failed" });
+          return;
+       }
        if (success) {
            // Check if there's only one player left
            const remaining = gameEngine.checkOnlyOnePlayerLeft(room);
@@ -166,6 +180,7 @@ function mountSocketHandlers(io) {
                // Auto win
                gameEngine.resolveShowdown(room, [remaining.id]);
                room.gameState.currentRound = "showdown";
+               room.gameState.turnVersion = (room.gameState.turnVersion || 0) + 1;
                io.to(roomId).emit("game:stateUpdate", room);
                if (callback) callback({ success: true });
                return;
@@ -176,6 +191,7 @@ function mountSocketHandlers(io) {
            } else {
                gameEngine.advanceTurn(room);
            }
+           room.gameState.turnVersion = (room.gameState.turnVersion || 0) + 1;
            io.to(roomId).emit("game:stateUpdate", room);
            if (callback) callback({ success: true });
        } else if (callback) {

@@ -8,7 +8,8 @@ function takeSnapshot(room) {
       currentRound: room.gameState.currentRound,
       pot: room.gameState.pot,
       currentRoundHighestBet: room.gameState.currentRoundHighestBet,
-      activePlayerIndex: room.gameState.activePlayerIndex
+      activePlayerIndex: room.gameState.activePlayerIndex,
+      turnVersion: room.gameState.turnVersion
     }
   }));
   room.gameState.roundHistory.push(snapshot);
@@ -26,6 +27,7 @@ function undoRound(room) {
   room.gameState.pot = snapshot.gameState.pot;
   room.gameState.currentRoundHighestBet = snapshot.gameState.currentRoundHighestBet;
   room.gameState.activePlayerIndex = snapshot.gameState.activePlayerIndex;
+  room.gameState.turnVersion = (room.gameState.turnVersion || 0) + 1;
   
   return true;
 }
@@ -69,6 +71,7 @@ function startHand(room) {
   room.gameState.roundHistory = [];
   room.gameState.showdownVotes = [];
   room.gameState.lastHandWinners = [];
+  room.gameState.turnVersion = (room.gameState.turnVersion || 0) + 1;
   
   // Lock the participant set for this hand. Rebuys during the hand do not change this.
   room.players.forEach(p => {
@@ -207,7 +210,6 @@ function handleAction(room, playerId, action, amount = 0) {
     case "call":
       {
         if (amountToCall <= 0) return false;
-        const amountToCall = highestBet - player.currentRoundContribution;
         const actualCall = Math.min(player.stack, amountToCall);
         player.stack -= actualCall;
         player.currentRoundContribution += actualCall;

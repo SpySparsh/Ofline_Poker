@@ -21,10 +21,12 @@ export default function ActionPanel({ roomState }) {
   const actionLockKey = [
     roomState?.gameState.currentRound,
     roomState?.gameState.activePlayerIndex,
+    roomState?.gameState.turnVersion || 0,
   ].join(":");
   const turnKey = [
     roomState?.gameState.currentRound,
     roomState?.gameState.activePlayerIndex,
+    roomState?.gameState.turnVersion || 0,
     roomState?.gameState.currentRoundHighestBet,
     me?.currentRoundContribution,
     me?.stack,
