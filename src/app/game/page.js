@@ -80,7 +80,7 @@ export default function GamePage() {
   const isMyTurn = !isShowdown && myIndex !== -1 && gameState.activePlayerIndex === myIndex;
   const tableWrapperClasses = isMyTurn
     ? "flex-1 flex flex-col items-center justify-center px-2 pt-0 pb-1 md:py-2 min-h-0"
-    : "flex-1 flex flex-col items-center justify-center px-2 pt-0 pb-1 md:py-2 min-h-0";
+    : "flex-1 flex flex-col items-center justify-start px-2 pt-0 pb-1 md:py-2 md:justify-center min-h-0";
   const tableSurfaceClasses = isMyTurn
     ? "relative w-full max-w-3xl flex-1 flex flex-col justify-between gap-0 min-h-0 md:min-h-[360px]"
     : "relative w-full max-w-3xl flex-1 flex flex-col justify-between gap-0 min-h-[340px] max-h-[62dvh] md:max-h-none md:min-h-[360px]";
