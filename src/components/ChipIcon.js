@@ -128,16 +128,17 @@ function MiniChipStack({ amount }) {
  */
 function ChipTray({ onAddChip, availableStack }) {
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+    <div className="flex gap-3 md:gap-2 overflow-x-auto pb-2 md:pb-1 px-0.5 scrollbar-hide snap-x">
       {DENOMINATIONS.map(d => (
-        <SingleChip
-          key={d}
-          denomination={d}
-          size="lg"
-          interactive
-          disabled={d > availableStack}
-          onClick={() => onAddChip(d)}
-        />
+        <div key={d} className="snap-start py-1 md:py-0">
+          <SingleChip
+            denomination={d}
+            size="lg"
+            interactive
+            disabled={d > availableStack}
+            onClick={() => onAddChip(d)}
+          />
+        </div>
       ))}
     </div>
   );

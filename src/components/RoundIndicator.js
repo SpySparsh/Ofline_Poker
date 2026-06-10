@@ -13,8 +13,8 @@ export default function RoundIndicator({ currentRound }) {
   if (currentRound === "showdown") return null;
 
   return (
-    <div className="flex items-center justify-center mb-8">
-      <div className="glass-panel flex p-2 gap-1 overflow-hidden" style={{ borderRadius: '99px' }}>
+    <div className="flex items-center justify-center mb-2 md:mb-8">
+      <div className="glass-panel flex p-1.5 md:p-2 gap-1 overflow-hidden" style={{ borderRadius: '99px' }}>
         {rounds.map((r, i) => {
           const isActive = r.id === currentRound;
           if (isActive) passed = false;
@@ -29,7 +29,7 @@ export default function RoundIndicator({ currentRound }) {
           return (
             <div 
               key={r.id} 
-              className={`px-4 py-1.5 rounded-full text-xs uppercase tracking-wider transition-all duration-300 ${stateClass}`}
+              className={`px-2.5 md:px-4 py-1 md:py-1.5 rounded-full text-[10px] md:text-xs uppercase tracking-wider transition-all duration-300 ${stateClass}`}
             >
               {r.label}
             </div>

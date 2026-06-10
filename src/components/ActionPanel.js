@@ -57,8 +57,8 @@ export default function ActionPanel({ roomState }) {
   if (!isMyTurn) {
     const activePlayer = roomState.players[roomState.gameState.activePlayerIndex];
     return (
-      <div className="glass-panel px-4 py-3 w-full max-w-2xl mx-auto flex items-center justify-center bg-black/80">
-        <div className="text-zinc-500 font-semibold text-xs uppercase tracking-widest flex items-center gap-2">
+      <div className="glass-panel px-4 py-4 md:py-3 w-full max-w-2xl mx-auto flex items-center justify-center bg-black/80">
+        <div className="text-zinc-400 font-semibold text-sm md:text-xs uppercase tracking-widest flex items-center gap-2">
           <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
           Waiting for {activePlayer ? activePlayer.name : "..."}
         </div>
@@ -76,12 +76,12 @@ export default function ActionPanel({ roomState }) {
       
       {/* Chip Tray — horizontally scrollable */}
       {canRaise && (
-        <div className="glass-panel px-3 py-2 mb-2 bg-black/70 border-b-0 rounded-b-none">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Tap chips to bet</span>
+        <div className="glass-panel px-3 py-3 md:py-2 mb-2 bg-black/70 border-b-0 rounded-b-none">
+          <div className="flex items-center justify-between mb-2 md:mb-1.5">
+            <span className="text-xs md:text-[10px] text-zinc-400 md:text-zinc-500 uppercase font-bold tracking-wider">Tap chips to bet</span>
             {stagedAmount > 0 && (
-              <button onClick={handleClearStaged} className="text-[10px] text-red-400 hover:text-red-300 uppercase font-bold tracking-wider flex items-center gap-1">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              <button onClick={handleClearStaged} className="min-h-8 px-2 md:min-h-0 md:px-0 text-xs md:text-[10px] text-red-400 hover:text-red-300 uppercase font-bold tracking-wider flex items-center gap-1">
+                <svg className="w-3.5 h-3.5 md:w-3 md:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 Clear
               </button>
             )}
@@ -90,9 +90,9 @@ export default function ActionPanel({ roomState }) {
           
           {/* Staged amount indicator */}
           {stagedAmount > 0 && (
-            <div className="mt-2 flex items-center justify-center gap-2 text-emerald-400">
-              <span className="text-[10px] uppercase tracking-wider text-zinc-500">Staged:</span>
-              <span className="font-mono font-bold text-lg">{stagedAmount.toLocaleString()}</span>
+            <div className="mt-3 md:mt-2 flex items-center justify-center gap-2 text-emerald-400">
+              <span className="text-xs md:text-[10px] uppercase tracking-wider text-zinc-500">Staged:</span>
+              <span className="font-mono font-bold text-xl md:text-lg">{stagedAmount.toLocaleString()}</span>
               {isAllIn && <span className="text-[10px] uppercase tracking-wider text-red-400 font-bold bg-red-500/10 px-2 py-0.5 rounded-full">ALL IN</span>}
             </div>
           )}
@@ -100,12 +100,12 @@ export default function ActionPanel({ roomState }) {
       )}
 
       {/* Action Buttons Row — compact */}
-      <div className="glass-panel px-3 py-2.5 bg-black/90 flex items-stretch gap-2" style={{ borderTopLeftRadius: canRaise ? 0 : undefined, borderTopRightRadius: canRaise ? 0 : undefined }}>
+      <div className="glass-panel px-2.5 md:px-3 py-3 md:py-2.5 bg-black/90 flex items-stretch gap-2.5 md:gap-2" style={{ borderTopLeftRadius: canRaise ? 0 : undefined, borderTopRightRadius: canRaise ? 0 : undefined }}>
         
         {/* Fold */}
         <button 
           onClick={() => handleAction("fold")}
-          className="flex-shrink-0 px-4 py-2.5 bg-red-600/80 hover:bg-red-500 text-white font-bold text-xs uppercase tracking-wider rounded-lg transition-all active:scale-95"
+          className="flex-shrink-0 min-h-14 md:min-h-0 px-4 md:px-4 py-4 md:py-2.5 bg-red-600/80 hover:bg-red-500 text-white font-bold text-sm md:text-xs uppercase tracking-wider rounded-lg transition-all active:scale-95"
         >
           Fold
         </button>
@@ -113,10 +113,10 @@ export default function ActionPanel({ roomState }) {
         {/* Check / Call */}
         <button 
           onClick={() => handleAction(canCheck ? "check" : "call")}
-          className="flex-shrink-0 px-4 py-2.5 bg-zinc-700 hover:bg-zinc-600 text-white font-bold text-xs uppercase tracking-wider rounded-lg transition-all active:scale-95 flex items-center gap-1.5"
+          className="flex-shrink-0 min-h-14 md:min-h-0 px-4 md:px-4 py-4 md:py-2.5 bg-zinc-700 hover:bg-zinc-600 text-white font-bold text-sm md:text-xs uppercase tracking-wider rounded-lg transition-all active:scale-95 flex items-center gap-1.5"
         >
           {canCheck ? "Check" : "Call"}
-          {!canCheck && <span className="font-mono text-emerald-300 text-xs">{amountToCall.toLocaleString()}</span>}
+          {!canCheck && <span className="font-mono text-emerald-300 text-sm md:text-xs">{amountToCall.toLocaleString()}</span>}
         </button>
 
         {/* Raise / Bet — Two-step confirm */}
@@ -132,10 +132,10 @@ export default function ActionPanel({ roomState }) {
               handleAction(canCheck ? "bet" : "raise", totalRaiseAmount);
             }}
             disabled={stagedAmount <= 0}
-            className={`flex-1 px-4 py-2.5 font-bold text-xs uppercase tracking-wider rounded-lg transition-all active:scale-95 flex items-center justify-center gap-1.5 ${
+            className={`flex-1 min-h-14 md:min-h-0 px-4 py-4 md:py-2.5 font-bold text-sm md:text-xs uppercase tracking-wider rounded-lg transition-all active:scale-95 flex items-center justify-center gap-1.5 ${
               isConfirming 
                 ? "bg-emerald-500 hover:bg-emerald-400 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)] animate-pulse-subtle" 
-                : "bg-emerald-700/60 hover:bg-emerald-600 text-white disabled:opacity-30 disabled:pointer-events-none"
+                : "bg-emerald-700/70 hover:bg-emerald-600 text-white disabled:opacity-40 disabled:saturate-50 disabled:pointer-events-none"
             }`}
           >
             {isConfirming ? (
