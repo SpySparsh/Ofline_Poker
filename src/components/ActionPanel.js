@@ -18,6 +18,10 @@ export default function ActionPanel({ roomState }) {
 
   const me = roomState?.players.find(p => p.id === playerId);
   const myIndex = roomState?.players.findIndex(p => p.id === playerId);
+  const actionLockKey = [
+    roomState?.gameState.currentRound,
+    roomState?.gameState.activePlayerIndex,
+  ].join(":");
   const turnKey = [
     roomState?.gameState.currentRound,
     roomState?.gameState.activePlayerIndex,
@@ -31,7 +35,7 @@ export default function ActionPanel({ roomState }) {
   const stagedAmount = isCurrentBetState ? betState.stagedAmount : 0;
   const isConfirming = isCurrentBetState ? betState.isConfirming : false;
   const selectedDenomination = isCurrentBetState ? betState.selectedDenomination : null;
-  const isActionLocked = submittedActionKey === turnKey;
+  const isActionLocked = isMyTurn && submittedActionKey === actionLockKey;
 
   const resetBetState = () => {
     setBetState({
@@ -50,7 +54,7 @@ export default function ActionPanel({ roomState }) {
 
   const handleAction = (action, amount = 0) => {
     if (isActionLocked) return;
-    setSubmittedActionKey(turnKey);
+    setSubmittedActionKey(actionLockKey);
     playSfx("click");
     socket.emit("game:action", { roomId: roomState.roomId, playerId, action, amount }, (res) => {
       if (!res?.success) {

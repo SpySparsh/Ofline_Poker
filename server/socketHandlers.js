@@ -160,8 +160,6 @@ function mountSocketHandlers(io) {
        
        const success = gameEngine.handleAction(room, playerId, action, amount);
        if (success) {
-           io.to(roomId).emit("game:stateUpdate", room);
-           
            // Check if there's only one player left
            const remaining = gameEngine.checkOnlyOnePlayerLeft(room);
            if (remaining) {
