@@ -3,7 +3,7 @@
 import { useSocket } from "@/context/SocketContext";
 
 export default function AdminControls({ roomState }) {
-  const { socket, isAdmin } = useSocket();
+  const { socket, isAdmin, dissolveRoom } = useSocket();
 
   if (!isAdmin || !roomState) return null;
 
@@ -27,6 +27,12 @@ export default function AdminControls({ roomState }) {
 
   const handleNextHand = () => {
     socket.emit("game:nextHand", { roomId: roomState.roomId });
+  };
+
+  const handleDissolveRoom = () => {
+    if (confirm("Dissolve this room for everyone?")) {
+      dissolveRoom();
+    }
   };
 
   const isShowdown = roomState.gameState.currentRound === "showdown";
@@ -84,6 +90,14 @@ export default function AdminControls({ roomState }) {
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
             End
+          </button>
+
+          <button
+            onClick={handleDissolveRoom}
+            title="Dissolve Room"
+            className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-red-950/50 hover:bg-red-900/70 text-red-300 border border-red-500/30 transition-all active:scale-95 flex items-center gap-1"
+          >
+            Dissolve
           </button>
 
     </div>

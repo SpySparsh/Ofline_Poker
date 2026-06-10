@@ -9,6 +9,7 @@ function handlePlayerLeave(io, socket, roomId, playerId) {
   
   socket.leave(roomId);
   removeConnection(socket.id);
+  socket.emit("room:left");
   
   if (empty) {
     // Room is gone, nothing to broadcast
@@ -16,6 +17,14 @@ function handlePlayerLeave(io, socket, roomId, playerId) {
   }
   
   if (removed && room) {
+    if (room.roomStatus === "playing") {
+      const canAct = p => p.status === "active" && p.stack > 0;
+      let loops = 0;
+      while (room.players.length > 0 && !canAct(room.players[room.gameState.activePlayerIndex]) && loops < room.players.length) {
+        room.gameState.activePlayerIndex = (room.gameState.activePlayerIndex + 1) % room.players.length;
+        loops++;
+      }
+    }
     // Broadcast updated state to remaining players
     if (room.roomStatus === "playing") {
       io.to(roomId).emit("game:stateUpdate", room);
@@ -76,6 +85,23 @@ function mountSocketHandlers(io) {
     // ROOM: LEAVE (explicit quit)
     socket.on("room:leave", ({ roomId, playerId }) => {
       handlePlayerLeave(io, socket, roomId, playerId);
+    });
+
+    // ROOM: DISSOLVE (Admin only)
+    socket.on("room:dissolve", ({ roomId, playerId }) => {
+      const room = getRoom(roomId);
+      if (!room || room.adminId !== playerId) return;
+
+      const sockets = getConnectionsInRoom(roomId);
+      io.to(roomId).emit("room:dissolved");
+      sockets.forEach(socketId => {
+        const memberSocket = io.sockets.sockets.get(socketId);
+        if (memberSocket) {
+          memberSocket.leave(roomId);
+        }
+        removeConnection(socketId);
+      });
+      deleteRoom(roomId);
     });
 
     // ROOM: REORDER (Admin only)

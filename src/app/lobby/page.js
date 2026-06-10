@@ -10,7 +10,7 @@ import BuyInSelector from "@/components/BuyInSelector";
 import { Suspense } from "react";
 
 function LobbyContent() {
-  const { roomState, isAdmin, isConnected, socket, playerId, isRehydratingSession } = useSocket();
+  const { roomState, isAdmin, isConnected, socket, playerId, isRehydratingSession, leaveRoom, dissolveRoom } = useSocket();
   const router = useRouter();
   const searchParams = useSearchParams();
   const roomCode = searchParams.get("room");
@@ -60,6 +60,16 @@ function LobbyContent() {
     socket.emit("game:start", { roomId: roomState.roomId });
   };
 
+  const handleExitRoom = () => {
+    leaveRoom();
+  };
+
+  const handleDissolveRoom = () => {
+    if (confirm("Dissolve this room for everyone?")) {
+      dissolveRoom();
+    }
+  };
+
   const allReady = roomState.players.length >= 2 && roomState.players.every(p => p.stack > 0);
   const myPlayer = roomState.players.find(p => p.id === playerId);
   const myBuyInLocked = myPlayer && myPlayer.stack > 0;
@@ -74,23 +84,42 @@ function LobbyContent() {
             <p className="text-zinc-500 text-sm">Wait for players to join and lock in their buy-in.</p>
          </div>
 
-         {/* Room Code Pill */}
-         <button 
-           onClick={handleCopy}
-           className="relative group glass-panel flex items-center gap-4 px-6 py-3 border-emerald-500/20 hover:border-emerald-500/50 transition-colors"
-         >
-            <div className="flex flex-col text-left">
-               <span className="text-[10px] uppercase text-emerald-500 font-bold tracking-widest">Room Code</span>
-               <span className="text-3xl font-mono tracking-widest text-white">{roomState.roomId}</span>
-            </div>
-            <div className="pl-4 border-l border-white/10 text-emerald-400">
-               {copied ? (
-                 <svg className="w-6 h-6 animate-pop" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
-               ) : (
-                 <svg className="w-6 h-6 opacity-50 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-               )}
-            </div>
-         </button>
+         <div className="flex flex-col sm:flex-row items-center gap-3">
+            {!isAdmin && (
+               <button
+                 onClick={handleExitRoom}
+                 className="btn-secondary px-4 py-2 text-xs uppercase tracking-wider"
+               >
+                 Exit Room
+               </button>
+            )}
+            {isAdmin && (
+               <button
+                 onClick={handleDissolveRoom}
+                 className="btn-secondary px-4 py-2 text-xs uppercase tracking-wider text-red-300 border-red-500/30"
+               >
+                 Dissolve Room
+               </button>
+            )}
+
+            {/* Room Code Pill */}
+            <button 
+              onClick={handleCopy}
+              className="relative group glass-panel flex items-center gap-4 px-6 py-3 border-emerald-500/20 hover:border-emerald-500/50 transition-colors"
+            >
+               <div className="flex flex-col text-left">
+                  <span className="text-[10px] uppercase text-emerald-500 font-bold tracking-widest">Room Code</span>
+                  <span className="text-3xl font-mono tracking-widest text-white">{roomState.roomId}</span>
+               </div>
+               <div className="pl-4 border-l border-white/10 text-emerald-400">
+                  {copied ? (
+                    <svg className="w-6 h-6 animate-pop" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                  ) : (
+                    <svg className="w-6 h-6 opacity-50 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                  )}
+               </div>
+            </button>
+         </div>
       </header>
 
       {/* Main Content Grid */}

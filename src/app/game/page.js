@@ -14,7 +14,7 @@ import { useBGM } from "@/hooks/useBGM";
 import { useAudio } from "@/hooks/useAudio";
 
 export default function GamePage() {
-  const { roomState, playerId, isConnected, isAdmin, socket, isRehydratingSession } = useSocket();
+  const { roomState, playerId, isConnected, isAdmin, socket, isRehydratingSession, leaveRoom } = useSocket();
   const router = useRouter();
   const [showRebuy, setShowRebuy] = useState(false);
   const { muted, toggleMute } = useAudio();
@@ -88,6 +88,15 @@ export default function GamePage() {
         <div className="flex flex-wrap items-center justify-end gap-2">
           {/* === ADMIN TOOLBAR === */}
           <AdminControls roomState={roomState} />
+
+          {!isAdmin && (
+            <button
+              onClick={leaveRoom}
+              className="glass-panel px-3 py-1.5 bg-black/50 hover:bg-red-900/40 text-red-300 font-bold border border-red-500/20 transition-colors text-[10px] uppercase tracking-wider h-full"
+            >
+              Exit Room
+            </button>
+          )}
           
           {/* Mute Toggle */}
           <button

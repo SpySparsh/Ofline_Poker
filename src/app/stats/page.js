@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSocket } from "@/context/SocketContext";
 
 export default function StatsPage() {
-  const { roomState, playerId, isConnected, isRehydratingSession } = useSocket();
+  const { roomState, playerId, isConnected, isRehydratingSession, isAdmin, leaveRoom, dissolveRoom } = useSocket();
   const router = useRouter();
 
   useEffect(() => {
@@ -39,6 +39,11 @@ export default function StatsPage() {
   }).sort((a, b) => b.pl - a.pl); // Best P&L first
 
   const myStatIndex = playerStats.findIndex(p => p.id === playerId);
+  const handleDissolveRoom = () => {
+    if (confirm("Dissolve this room for everyone?")) {
+      dissolveRoom();
+    }
+  };
 
   return (
     <div className="min-h-screen p-4 md:p-8 max-w-4xl mx-auto py-12 flex flex-col">
@@ -93,6 +98,24 @@ export default function StatsPage() {
        </div>
 
        <div className="text-center mt-auto">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-4">
+             {!isAdmin && (
+                <button 
+                   onClick={leaveRoom}
+                   className="btn-secondary w-full max-w-sm mx-auto"
+                >
+                   Exit Room
+                </button>
+             )}
+             {isAdmin && (
+                <button 
+                   onClick={handleDissolveRoom}
+                   className="btn-secondary w-full max-w-sm mx-auto text-red-300 border-red-500/30"
+                >
+                   Dissolve Room
+                </button>
+             )}
+          </div>
           <button 
              onClick={() => router.push("/")}
              className="btn-secondary w-full max-w-sm mx-auto"

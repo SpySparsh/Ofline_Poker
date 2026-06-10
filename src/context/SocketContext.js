@@ -27,6 +27,13 @@ export function SocketProvider({ children }) {
   useEffect(() => { roomStateRef.current = roomState; }, [roomState]);
   useEffect(() => { playerIdRef.current = playerId; }, [playerId]);
 
+  const clearRoomSession = useCallback(() => {
+    localStorage.removeItem(ROOM_CODE_KEY);
+    localStorage.removeItem(PLAYER_ID_KEY);
+    localStorage.removeItem(PLAYER_NAME_KEY);
+    sessionStorage.removeItem("poker_playerId");
+  }, []);
+
   // Explicit leave function the frontend can call
   const leaveRoom = useCallback(() => {
     if (roomStateRef.current && playerIdRef.current) {
@@ -35,11 +42,19 @@ export function SocketProvider({ children }) {
         playerId: playerIdRef.current,
       });
     }
-    localStorage.removeItem(ROOM_CODE_KEY);
-    localStorage.removeItem(PLAYER_NAME_KEY);
+    clearRoomSession();
     setRoomState(null);
     setIsAdmin(false);
     setIsRehydratingSession(false);
+  }, [clearRoomSession]);
+
+  const dissolveRoom = useCallback(() => {
+    if (roomStateRef.current && playerIdRef.current) {
+      socket.emit("room:dissolve", {
+        roomId: roomStateRef.current.roomId,
+        playerId: playerIdRef.current,
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -79,6 +94,8 @@ export function SocketProvider({ children }) {
             localStorage.setItem(PLAYER_NAME_KEY, savedPlayerName);
           }
           onRoomUpdated(res.room);
+        } else {
+          clearRoomSession();
         }
         setIsRehydratingSession(false);
       });
@@ -91,6 +108,14 @@ export function SocketProvider({ children }) {
 
     function onDisconnect() {
       setIsConnected(false);
+    }
+
+    function onRoomClosed() {
+      clearRoomSession();
+      setRoomState(null);
+      setIsAdmin(false);
+      setIsRehydratingSession(false);
+      window.location.assign("/");
     }
 
     function onRoomUpdated(newRoomState) {
@@ -168,6 +193,8 @@ export function SocketProvider({ children }) {
     socket.on("disconnect", onDisconnect);
     socket.on("room:updated", onRoomUpdated);
     socket.on("game:stateUpdate", onRoomUpdated);
+    socket.on("room:left", onRoomClosed);
+    socket.on("room:dissolved", onRoomClosed);
     if (socket.connected) {
       onConnect();
     } else {
@@ -179,12 +206,14 @@ export function SocketProvider({ children }) {
       socket.off("disconnect", onDisconnect);
       socket.off("room:updated", onRoomUpdated);
       socket.off("game:stateUpdate", onRoomUpdated);
+      socket.off("room:left", onRoomClosed);
+      socket.off("room:dissolved", onRoomClosed);
       socket.disconnect();
     };
-  }, []);
+  }, [clearRoomSession]);
 
   return (
-    <SocketContext.Provider value={{ isConnected, roomState, playerId, isAdmin, isRehydratingSession, socket, leaveRoom }}>
+    <SocketContext.Provider value={{ isConnected, roomState, playerId, isAdmin, isRehydratingSession, socket, leaveRoom, dissolveRoom }}>
       {children}
     </SocketContext.Provider>
   );

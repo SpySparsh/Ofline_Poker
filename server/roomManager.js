@@ -122,12 +122,13 @@ function removePlayerFromRoom(roomId, playerId) {
   const idx = room.players.findIndex(p => p.id === playerId);
   if (idx === -1) return { room, removed: false, empty: room.players.length === 0 };
 
+  const removedIndex = idx;
   room.players.splice(idx, 1);
 
   // If room is now empty, delete it entirely
   if (room.players.length === 0) {
     activeRooms.delete(roomId);
-    return { room: null, removed: true, empty: true };
+    return { room: null, removed: true, empty: true, removedIndex };
   }
 
   // If the removed player was admin, promote next player
@@ -135,15 +136,19 @@ function removePlayerFromRoom(roomId, playerId) {
     room.adminId = room.players[0].id;
   }
 
-  // Fix activePlayerIndex if it's now out of bounds or pointing at wrong player
-  if (room.gameState.activePlayerIndex >= room.players.length) {
+  // Fix turn/dealer indices after removing a seat
+  if (room.gameState.activePlayerIndex > removedIndex) {
+    room.gameState.activePlayerIndex -= 1;
+  } else if (room.gameState.activePlayerIndex >= room.players.length) {
     room.gameState.activePlayerIndex = 0;
   }
-  if (room.gameState.dealerIndex >= room.players.length) {
+  if (room.gameState.dealerIndex > removedIndex) {
+    room.gameState.dealerIndex -= 1;
+  } else if (room.gameState.dealerIndex >= room.players.length) {
     room.gameState.dealerIndex = 0;
   }
 
-  return { room, removed: true, empty: false };
+  return { room, removed: true, empty: false, removedIndex };
 }
 
 module.exports = {
