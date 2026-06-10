@@ -53,6 +53,7 @@ function startHand(room) {
   room.gameState.pot = 0;
   room.gameState.roundHistory = [];
   room.gameState.showdownVotes = [];
+  room.gameState.lastHandWinners = [];
   
   // Bring waiting players into active
   room.players.forEach(p => {
@@ -299,6 +300,13 @@ function handleShowdownVote(room, playerId, vote) {
 
 function resolveShowdown(room, winners) {
    // winners is array of playerId strings
+   room.gameState.lastHandWinners = winners
+     .map(id => {
+       const player = room.players.find(p => p.id === id);
+       return player ? { id: player.id, name: player.name } : null;
+     })
+     .filter(Boolean);
+
    const splitAmount = Math.floor(room.gameState.pot / winners.length);
    
    room.players.forEach(p => {

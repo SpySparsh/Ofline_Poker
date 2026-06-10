@@ -23,11 +23,21 @@ export default function ShowdownPanel({ roomState }) {
   // Wait, if it resolved, pot might be 0, and we are just waiting for Next Hand.
   const pot = roomState.gameState.pot;
   const isResolved = pot === 0;
+  const winners = roomState.gameState.lastHandWinners || [];
+  const winnerNames = winners.map(w => w.name);
+  const winnerText = winnerNames.length === 1
+    ? `${winnerNames[0]} wins the hand`
+    : winnerNames.length > 1
+      ? `${winnerNames.slice(0, -1).join(", ")} and ${winnerNames[winnerNames.length - 1]} split the pot`
+      : "";
 
   if (isResolved) {
      return (
         <div className="glass-panel p-8 w-full max-w-2xl mx-auto flex flex-col items-center justify-center bg-black/90 border-emerald-500/50 shadow-[0_0_30px_rgba(16,185,129,0.1)] text-center animate-pop">
             <h2 className="text-3xl font-bold tracking-widest text-emerald-400 mb-2">HAND COMPLETE</h2>
+            {winnerText && (
+               <div className="text-xl font-bold text-white mb-3">{winnerText}</div>
+            )}
             <p className="text-zinc-400 mb-8">Awaiting dealer for next hand...</p>
 
             {isAdmin && (

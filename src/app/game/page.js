@@ -10,11 +10,12 @@ import RoundIndicator from "@/components/RoundIndicator";
 import AdminControls from "@/components/AdminControls";
 import ShowdownPanel from "@/components/ShowdownPanel";
 import RebuyModal from "@/components/RebuyModal";
+import ExitRoomButton from "@/components/ExitRoomButton";
 import { useBGM } from "@/hooks/useBGM";
 import { useAudio } from "@/hooks/useAudio";
 
 export default function GamePage() {
-  const { roomState, playerId, isConnected, isAdmin, socket, isRehydratingSession, leaveRoom } = useSocket();
+  const { roomState, playerId, isConnected, isAdmin, socket, isRehydratingSession } = useSocket();
   const router = useRouter();
   const [showRebuy, setShowRebuy] = useState(false);
   const { muted, toggleMute } = useAudio();
@@ -90,12 +91,11 @@ export default function GamePage() {
           <AdminControls roomState={roomState} />
 
           {!isAdmin && (
-            <button
-              onClick={leaveRoom}
+            <ExitRoomButton
               className="glass-panel px-3 py-1.5 bg-black/50 hover:bg-red-900/40 text-red-300 font-bold border border-red-500/20 transition-colors text-[10px] uppercase tracking-wider h-full"
             >
               Exit Room
-            </button>
+            </ExitRoomButton>
           )}
           
           {/* Mute Toggle */}

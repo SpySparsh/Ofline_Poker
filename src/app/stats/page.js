@@ -3,9 +3,10 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSocket } from "@/context/SocketContext";
+import ExitRoomButton from "@/components/ExitRoomButton";
 
 export default function StatsPage() {
-  const { roomState, playerId, isConnected, isRehydratingSession, isAdmin, leaveRoom, dissolveRoom } = useSocket();
+  const { roomState, playerId, isConnected, isRehydratingSession, isAdmin, dissolveRoom } = useSocket();
   const router = useRouter();
 
   useEffect(() => {
@@ -100,12 +101,11 @@ export default function StatsPage() {
        <div className="text-center mt-auto">
           <div className="flex flex-col sm:flex-row gap-3 justify-center mb-4">
              {!isAdmin && (
-                <button 
-                   onClick={leaveRoom}
+                <ExitRoomButton 
                    className="btn-secondary w-full max-w-sm mx-auto"
                 >
                    Exit Room
-                </button>
+                </ExitRoomButton>
              )}
              {isAdmin && (
                 <button 

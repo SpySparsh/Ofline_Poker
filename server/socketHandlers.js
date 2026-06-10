@@ -203,6 +203,7 @@ function mountSocketHandlers(io) {
        if(!room) return;
        gameEngine.undoRound(room);
        room.gameState.showdownVotes = [];
+       room.gameState.lastHandWinners = [];
        room.gameState.currentRound = "showdown";
        io.to(roomId).emit("game:stateUpdate", room);
     });

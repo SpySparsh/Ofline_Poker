@@ -6,11 +6,12 @@ import { useSocket } from "@/context/SocketContext";
 import PlayerList from "@/components/PlayerList";
 import SettingsPanel from "@/components/SettingsPanel";
 import BuyInSelector from "@/components/BuyInSelector";
+import ExitRoomButton from "@/components/ExitRoomButton";
 
 import { Suspense } from "react";
 
 function LobbyContent() {
-  const { roomState, isAdmin, isConnected, socket, playerId, isRehydratingSession, leaveRoom, dissolveRoom } = useSocket();
+  const { roomState, isAdmin, isConnected, socket, playerId, isRehydratingSession, dissolveRoom } = useSocket();
   const router = useRouter();
   const searchParams = useSearchParams();
   const roomCode = searchParams.get("room");
@@ -60,10 +61,6 @@ function LobbyContent() {
     socket.emit("game:start", { roomId: roomState.roomId });
   };
 
-  const handleExitRoom = () => {
-    leaveRoom();
-  };
-
   const handleDissolveRoom = () => {
     if (confirm("Dissolve this room for everyone?")) {
       dissolveRoom();
@@ -86,12 +83,11 @@ function LobbyContent() {
 
          <div className="flex flex-col sm:flex-row items-center gap-3">
             {!isAdmin && (
-               <button
-                 onClick={handleExitRoom}
+               <ExitRoomButton
                  className="btn-secondary px-4 py-2 text-xs uppercase tracking-wider"
                >
                  Exit Room
-               </button>
+               </ExitRoomButton>
             )}
             {isAdmin && (
                <button
