@@ -77,6 +77,16 @@ export default function GamePage() {
   // Split into top row and bottom row
   const topPlayers = displayPlayers.slice(0, Math.floor(displayPlayers.length / 2));
   const bottomPlayers = displayPlayers.slice(Math.floor(displayPlayers.length / 2));
+  const isMyTurn = !isShowdown && myIndex !== -1 && gameState.activePlayerIndex === myIndex;
+  const tableWrapperClasses = isMyTurn
+    ? "flex-1 flex flex-col items-center justify-center px-2 pt-0 pb-1 md:py-2 min-h-0"
+    : "flex-1 flex flex-col items-center justify-center px-2 pt-0 pb-0 md:py-2 min-h-0";
+  const tableSurfaceClasses = isMyTurn
+    ? "relative w-full max-w-3xl flex-1 flex flex-col justify-between gap-0 min-h-0 md:min-h-[360px]"
+    : "relative w-full max-w-3xl flex-none flex flex-col justify-center gap-5 min-h-[300px] max-h-[58dvh] md:flex-1 md:justify-between md:gap-0 md:max-h-none md:min-h-[360px]";
+  const actionDockClasses = isMyTurn
+    ? "shrink-0 sticky md:relative bottom-0 z-40 bg-gradient-to-t from-black/95 via-black/85 to-transparent pt-1.5 md:pt-4 pb-[max(0.6rem,env(safe-area-inset-bottom))] md:pb-4 px-2.5 md:px-3"
+    : "shrink-0 relative md:relative z-40 bg-black/35 md:bg-gradient-to-t md:from-black/95 md:via-black/85 md:to-transparent pt-0.5 md:pt-4 pb-[max(0.45rem,env(safe-area-inset-bottom))] md:pb-4 px-2.5 md:px-3";
 
   return (
     <div className="h-dvh flex flex-col relative overflow-hidden">
@@ -122,13 +132,13 @@ export default function GamePage() {
       </div>
 
       {/* === MAIN TABLE AREA === */}
-      <div className="flex-1 flex flex-col items-center justify-center px-2 pt-0 pb-1 md:py-2 min-h-0">
+      <div className={tableWrapperClasses}>
         
         {/* Round Indicator */}
         <RoundIndicator currentRound={gameState.currentRound} />
 
         {/* Table Surface */}
-        <div className="relative w-full max-w-3xl flex-1 flex flex-col justify-between gap-0 min-h-0 md:min-h-[360px]">
+        <div className={tableSurfaceClasses}>
           
           {/* Top Row Players */}
           <div className="flex justify-center items-start w-full px-6 md:px-2 pt-2 md:pt-2 gap-4 md:gap-0 md:justify-evenly">
@@ -177,7 +187,7 @@ export default function GamePage() {
       </div>
 
       {/* === BOTTOM ACTION SHEET === */}
-      <div className="shrink-0 sticky md:relative bottom-0 z-40 bg-gradient-to-t from-black/95 via-black/85 to-transparent pt-1.5 md:pt-4 pb-[max(0.6rem,env(safe-area-inset-bottom))] md:pb-4 px-2.5 md:px-3">
+      <div className={actionDockClasses}>
         {isShowdown ? (
           <ShowdownPanel roomState={roomState} />
         ) : (
