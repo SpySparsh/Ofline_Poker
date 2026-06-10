@@ -430,7 +430,7 @@ function mountSocketHandlers(io) {
           }
           const success = gameEngine.rebuy(room, playerId, amount);
           if (!success) {
-             reply(callback, { success: false, message: "Invalid rebuy amount" });
+             reply(callback, { success: false, message: "Invalid chip adjustment" });
              return;
           }
           io.to(roomId).emit("game:stateUpdate", room);

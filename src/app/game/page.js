@@ -127,7 +127,7 @@ export default function GamePage() {
             className="glass-panel h-9 md:h-auto px-2.5 md:px-3 py-1 md:py-1.5 bg-black/50 hover:bg-emerald-900/50 text-emerald-400 font-bold border border-emerald-500/30 transition-colors text-[9px] md:text-[10px] uppercase tracking-wider flex items-center gap-1 md:gap-1.5"
           >
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-            Add Chips
+            Adjust Chips
           </button>
         </div>
       </div>
@@ -197,7 +197,15 @@ export default function GamePage() {
       </div>
 
       {/* Modals */}
-      {showRebuy && <RebuyModal roomId={roomState.roomId} onClose={() => setShowRebuy(false)} />}
+      {showRebuy && (
+        <RebuyModal
+          roomId={roomState.roomId}
+          player={me}
+          roomStatus={roomState.roomStatus}
+          currentRound={gameState.currentRound}
+          onClose={() => setShowRebuy(false)}
+        />
+      )}
     </div>
   );
 }

@@ -55,6 +55,19 @@ function isInCurrentHand(player) {
     return player.inCurrentHand !== false && !player.isSittingOut;
 }
 
+function applyPendingChipAdjustments(room) {
+  room.players.forEach(p => {
+    const pendingAdjustment = Number(p.pendingChipAdjustment || 0);
+    if (Number.isFinite(pendingAdjustment) && pendingAdjustment !== 0) {
+      const nextStack = Math.max(0, p.stack + pendingAdjustment);
+      const appliedAdjustment = nextStack - p.stack;
+      p.stack = nextStack;
+      p.totalBoughtIn = Math.max(0, (p.totalBoughtIn || 0) + appliedAdjustment);
+      p.pendingChipAdjustment = 0;
+    }
+  });
+}
+
 function determineActivePlayers(room) {
     return room.players.filter(p => isInCurrentHand(p) && p.status === "active" && p.stack > 0);
 }
@@ -64,6 +77,8 @@ function determinePlayersInHand(room) {
 }
 
 function startHand(room) {
+  applyPendingChipAdjustments(room);
+
   const eligiblePlayers = room.players.filter(p => isEligibleForNextHand(room, p));
   if (eligiblePlayers.length < 2) return false;
 
@@ -398,6 +413,7 @@ function resolveShowdown(room, winners) {
 }
 
 function concludeGame(room) {
+  applyPendingChipAdjustments(room);
   // Refund current pot based on totalHandContribution
   room.players.forEach(p => {
      p.stack += p.totalHandContribution;
@@ -408,16 +424,31 @@ function concludeGame(room) {
 
 function rebuy(room, playerId, amount) {
   const p = room.players.find(p => p.id === playerId);
-  const rebuyAmount = Number(amount);
+  const adjustmentAmount = Number(amount);
+  const isCurrentHandParticipant =
+    !!p &&
+    room.roomStatus === "playing" &&
+    room.gameState.currentRound !== "showdown" &&
+    isInCurrentHand(p);
+  const currentPendingAdjustment = Number(p?.pendingChipAdjustment || 0);
+  const projectedStack = p
+    ? p.stack + (isCurrentHandParticipant ? currentPendingAdjustment : 0) + adjustmentAmount
+    : 0;
+
   if (
     p &&
-    Number.isFinite(rebuyAmount) &&
-    rebuyAmount > 0 &&
-    Number.isSafeInteger(rebuyAmount) &&
-    Number.isSafeInteger(p.stack + rebuyAmount)
+    Number.isFinite(adjustmentAmount) &&
+    adjustmentAmount !== 0 &&
+    Number.isSafeInteger(adjustmentAmount) &&
+    Number.isSafeInteger(projectedStack) &&
+    projectedStack >= 0
   ) {
-      p.stack += rebuyAmount;
-      p.totalBoughtIn = (p.totalBoughtIn || 0) + rebuyAmount;
+      if (isCurrentHandParticipant) {
+        p.pendingChipAdjustment = currentPendingAdjustment + adjustmentAmount;
+      } else {
+        p.stack += adjustmentAmount;
+        p.totalBoughtIn = Math.max(0, (p.totalBoughtIn || 0) + adjustmentAmount);
+      }
       return true;
   }
   return false;
