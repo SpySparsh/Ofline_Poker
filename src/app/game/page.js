@@ -79,20 +79,20 @@ export default function GamePage() {
   const bottomPlayers = displayPlayers.slice(Math.floor(displayPlayers.length / 2));
 
   return (
-    <div className="min-h-dvh flex flex-col relative overflow-hidden">
+    <div className="h-dvh flex flex-col relative overflow-hidden">
       
       {/* === TOP BAR === */}
-      <div className="relative z-20 flex flex-wrap items-start justify-between px-2 md:px-3 pt-2 md:pt-3 pb-1 gap-1.5 md:gap-2">
-        <div className="glass-panel px-2.5 md:px-3 py-1 bg-black/50 text-[9px] md:text-[10px] font-mono text-zinc-500 uppercase tracking-widest mt-0.5 md:mt-1">
+      <div className="relative z-20 flex items-start justify-between px-2 md:px-3 pt-1.5 md:pt-3 pb-0.5 md:pb-1 gap-1.5 md:gap-2 shrink-0">
+        <div className="glass-panel px-2 md:px-3 py-1 bg-black/50 text-[9px] md:text-[10px] font-mono text-zinc-500 uppercase tracking-widest mt-0.5 md:mt-1">
           Hand #{gameState.gameNumber}
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-1.5 md:gap-2">
+        <div className="flex items-center justify-end gap-1.5 md:gap-2 min-w-0">
           {/* === ADMIN TOOLBAR === */}
           <AdminControls roomState={roomState} />
 
           {!isAdmin && (
             <ExitRoomButton
-              className="glass-panel px-2.5 md:px-3 py-1 md:py-1.5 bg-black/50 hover:bg-red-900/40 text-red-300 font-bold border border-red-500/20 transition-colors text-[9px] md:text-[10px] uppercase tracking-wider h-full"
+              className="glass-panel h-9 md:h-auto px-2.5 md:px-3 py-1 md:py-1.5 bg-black/50 hover:bg-red-900/40 text-red-300 font-bold border border-red-500/20 transition-colors text-[9px] md:text-[10px] uppercase tracking-wider"
             >
               Exit Room
             </ExitRoomButton>
@@ -101,7 +101,7 @@ export default function GamePage() {
           {/* Mute Toggle */}
           <button
             onClick={toggleMute}
-            className="glass-panel px-2 py-1 md:py-1.5 bg-black/50 hover:bg-zinc-800/50 text-zinc-400 hover:text-zinc-200 transition-colors text-[10px] uppercase tracking-wider h-full"
+            className="glass-panel h-9 md:h-auto px-2 py-1 md:py-1.5 bg-black/50 hover:bg-zinc-800/50 text-zinc-400 hover:text-zinc-200 transition-colors text-[10px] uppercase tracking-wider"
             title={muted ? "Unmute" : "Mute"}
           >
             {muted ? (
@@ -113,7 +113,7 @@ export default function GamePage() {
           
           <button 
             onClick={() => setShowRebuy(true)}
-            className="glass-panel px-2.5 md:px-3 py-1 md:py-1.5 bg-black/50 hover:bg-emerald-900/50 text-emerald-400 font-bold border border-emerald-500/30 transition-colors text-[9px] md:text-[10px] uppercase tracking-wider flex items-center gap-1 md:gap-1.5 h-full"
+            className="glass-panel h-9 md:h-auto px-2.5 md:px-3 py-1 md:py-1.5 bg-black/50 hover:bg-emerald-900/50 text-emerald-400 font-bold border border-emerald-500/30 transition-colors text-[9px] md:text-[10px] uppercase tracking-wider flex items-center gap-1 md:gap-1.5"
           >
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
             Add Chips
@@ -122,45 +122,53 @@ export default function GamePage() {
       </div>
 
       {/* === MAIN TABLE AREA === */}
-      <div className="flex-none md:flex-1 flex flex-col items-center justify-start md:justify-center px-2 pt-1 pb-0 md:py-2 min-h-0">
+      <div className="flex-1 flex flex-col items-center justify-center px-2 pt-0 pb-1 md:py-2 min-h-0">
         
         {/* Round Indicator */}
         <RoundIndicator currentRound={gameState.currentRound} />
 
         {/* Table Surface */}
-        <div className="relative w-full max-w-3xl flex-none md:flex-1 flex flex-col justify-center md:justify-between gap-2 md:gap-0 min-h-[220px] max-h-[42dvh] md:max-h-none md:min-h-[360px]">
+        <div className="relative w-full max-w-3xl flex-1 flex flex-col justify-between gap-0 min-h-0 md:min-h-[360px]">
           
           {/* Top Row Players */}
-          <div className="flex justify-evenly items-start w-full px-1 md:px-2 pt-1 md:pt-2">
+          <div className="flex justify-center items-start w-full px-6 md:px-2 pt-2 md:pt-2 gap-4 md:gap-0 md:justify-evenly">
             {topPlayers.map(p => {
               const originalIndex = players.findIndex(orig => orig.id === p.id);
+              const topIndex = topPlayers.findIndex(player => player.id === p.id);
+              const isLeftSeat = topPlayers.length > 1 && topIndex === 0;
+              const isRightSeat = topPlayers.length > 1 && topIndex === topPlayers.length - 1;
               return (
+                <div key={p.id} className={`${isLeftSeat ? "translate-y-3 md:translate-y-0" : ""} ${isRightSeat ? "translate-y-3 md:translate-y-0" : ""}`}>
                 <PlayerCard 
-                  key={p.id}
                   player={p} 
                   isCurrentTurn={!isShowdown && gameState.activePlayerIndex === originalIndex}
                   isMe={p.id === playerId}
                 />
+                </div>
               );
             })}
           </div>
 
           {/* Center Pot */}
-          <div className="flex items-center justify-center py-1 md:py-2">
+          <div className="flex items-center justify-center py-0 md:py-2">
             <PotDisplay potAmount={gameState.pot} />
           </div>
 
           {/* Bottom Row Players */}
-          <div className="flex justify-evenly items-end w-full px-1 md:px-2 pb-1 md:pb-2">
+          <div className="flex justify-center items-end w-full px-2 md:px-2 pb-1 md:pb-2 gap-4 md:gap-0 md:justify-evenly">
             {bottomPlayers.map(p => {
               const originalIndex = players.findIndex(orig => orig.id === p.id);
+              const bottomIndex = bottomPlayers.findIndex(player => player.id === p.id);
+              const isLeftSeat = bottomPlayers.length > 1 && bottomIndex === 0;
+              const isRightSeat = bottomPlayers.length > 1 && bottomIndex === bottomPlayers.length - 1;
               return (
+                <div key={p.id} className={`${isLeftSeat ? "-translate-y-3 md:translate-y-0" : ""} ${isRightSeat ? "-translate-y-3 md:translate-y-0" : ""}`}>
                 <PlayerCard 
-                  key={p.id}
                   player={p} 
                   isCurrentTurn={!isShowdown && gameState.activePlayerIndex === originalIndex}
                   isMe={p.id === playerId}
                 />
+                </div>
               );
             })}
           </div>
@@ -169,7 +177,7 @@ export default function GamePage() {
       </div>
 
       {/* === BOTTOM ACTION SHEET === */}
-      <div className="sticky md:relative bottom-0 z-40 bg-gradient-to-t from-black/95 via-black/80 to-transparent pt-2 md:pt-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:pb-4 px-2.5 md:px-3">
+      <div className="shrink-0 sticky md:relative bottom-0 z-40 bg-gradient-to-t from-black/95 via-black/85 to-transparent pt-1.5 md:pt-4 pb-[max(0.6rem,env(safe-area-inset-bottom))] md:pb-4 px-2.5 md:px-3">
         {isShowdown ? (
           <ShowdownPanel roomState={roomState} />
         ) : (

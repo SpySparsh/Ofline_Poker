@@ -48,7 +48,7 @@ function formatChipLabel(denomination) {
  * Renders a single chip icon.
  * size: "sm" (16px), "md" (28px), "lg" (40px)
  */
-function SingleChip({ denomination, size = "md", count, onClick, interactive = false, disabled = false }) {
+function SingleChip({ denomination, size = "md", count, onClick, interactive = false, disabled = false, selected = false }) {
   const colors = CHIP_COLORS[denomination] || CHIP_COLORS[100];
   
   const sizes = {
@@ -70,7 +70,7 @@ function SingleChip({ denomination, size = "md", count, onClick, interactive = f
         disabled
           ? "cursor-not-allowed opacity-40 grayscale"
           : interactive 
-            ? "cursor-pointer hover:scale-110 active:scale-95 hover:brightness-125 shadow-md hover:shadow-lg" 
+            ? `cursor-pointer hover:scale-110 active:scale-95 hover:brightness-125 shadow-md hover:shadow-lg ${selected ? "scale-110 -translate-y-1" : ""}`
             : "cursor-default"
       }`}
       style={{
@@ -78,7 +78,9 @@ function SingleChip({ denomination, size = "md", count, onClick, interactive = f
         height: s.w,
         backgroundColor: colors.bg,
         border: `${s.ringW}px dashed ${colors.ring}`,
-        boxShadow: interactive && !disabled ? `0 2px 8px ${colors.ring}40` : "none",
+        boxShadow: selected
+          ? `0 0 0 3px rgba(16,185,129,0.45), 0 0 18px ${colors.ring}90`
+          : interactive && !disabled ? `0 2px 8px ${colors.ring}40` : "none",
       }}
       title={disabled ? `${denomination} — not enough chips` : `${denomination} chip`}
     >
@@ -126,9 +128,9 @@ function MiniChipStack({ amount }) {
  * Players tap chips to increment their working bet.
  * Chips above the player's remaining stack are greyed out.
  */
-function ChipTray({ onAddChip, availableStack }) {
+function ChipTray({ onAddChip, availableStack, selectedDenomination }) {
   return (
-    <div className="flex gap-3 md:gap-2 overflow-x-auto pb-2 md:pb-1 px-0.5 scrollbar-hide snap-x">
+    <div className="flex gap-3.5 md:gap-2 overflow-x-auto pb-2.5 md:pb-1 pt-1.5 md:pt-0 px-1 scrollbar-hide snap-x">
       {DENOMINATIONS.map(d => (
         <div key={d} className="snap-start py-1 md:py-0">
           <SingleChip
@@ -136,6 +138,7 @@ function ChipTray({ onAddChip, availableStack }) {
             size="lg"
             interactive
             disabled={d > availableStack}
+            selected={selectedDenomination === d}
             onClick={() => onAddChip(d)}
           />
         </div>
